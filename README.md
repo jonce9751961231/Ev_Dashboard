@@ -2,6 +2,8 @@
 
 An automotive digital cockpit and real-time predictive thermal management system for Electric Vehicles powered by **48V to 96V BLDC Motors**, featuring **ESP32 CSV Data Logging** and **Physics-Informed Multi-Horizon AI Temperature Forecasting** (+1 min, +5 min, +15 min, +30 min).
 
+**GitHub Repository:** [https://github.com/jonce9751961231/Ev_Dashboard](https://github.com/jonce9751961231/Ev_Dashboard)
+
 ---
 
 ## System Architecture

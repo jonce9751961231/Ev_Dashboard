@@ -5,6 +5,7 @@ echo ===========================================================================
 echo       AURA EV COCKPIT - UNIFIED HOST APPLICATION SERVER (PORT 8000)
 echo ===============================================================================
 echo.
+cd /d "C:\Users\ELCOT\.gemini\antigravity\scratch\ev_c2000_dashboard"
 echo [1/2] Opening Web Cockpit in your default browser...
 start http://localhost:8000/
 echo.

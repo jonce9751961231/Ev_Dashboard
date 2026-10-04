@@ -163,12 +163,22 @@ simulator = LiveVehicleSimulator()
 
 def predict_multi_horizon(v, i, rpm, temp, p_joule, p_elec, dt, rolling_i):
     """Executes multi-horizon prediction using Random Forest model (<2ms)"""
-    feat = [[v, i, rpm, temp, p_joule, p_elec, dt, rolling_i]]
     if rf_model is not None:
         try:
-            preds = rf_model.predict(feat)[0]
-            return round(preds[0], 1), round(preds[1], 1), round(preds[2], 1), round(preds[3], 1)
-        except Exception:
+            import pandas as pd
+            feat_df = pd.DataFrame([{
+                "voltage_v": float(v),
+                "current_a": float(i),
+                "rpm": int(rpm),
+                "temp_c": float(temp),
+                "p_joule_loss": float(p_joule),
+                "p_elec": float(p_elec),
+                "temp_rate_of_change": float(dt),
+                "current_rolling_60s": float(rolling_i)
+            }])
+            preds = rf_model.predict(feat_df)[0]
+            return round(float(preds[0]), 1), round(float(preds[1]), 1), round(float(preds[2]), 1), round(float(preds[3]), 1)
+        except Exception as err:
             pass
 
     # Physics surrogate fallback
@@ -226,8 +236,9 @@ def post_predict(req: PredictionRequest):
         req.voltage_v, req.current_a, req.rpm, req.temp_c,
         p_joule, p_elec, 0.05, req.current_a
     )
+    req_dict = req.model_dump() if hasattr(req, "model_dump") else req.dict()
     return {
-        "input": req.dict(),
+        "input": req_dict,
         "power_losses": {"p_joule_loss_w": p_joule, "p_electrical_w": p_elec},
         "forecasts": {
             "plus_1m_degC": p1,

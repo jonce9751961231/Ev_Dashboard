@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C / C++ build artifacts
+*.obj
+*.o
+*.out
+*.hex
+*.bin
+Debug/
+Release/
+
+# Environment & IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.system_generated/
+*.log
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

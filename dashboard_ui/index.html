@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aura EV Cockpit | 12V DC Motor Continuous Testbed & Random Forest AI</title>
+  <title>Aura EV | 12V DC Motor Real-Time AI Thermal Dashboard</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Lucide Icons -->
+  <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-cyan-500 selection:text-black">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-black">
 
-  <!-- Header & Telemetry Status Bar -->
-  <header class="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-md sticky top-0 z-50 px-6 py-3">
+  <!-- Header -->
+  <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
       
-      <!-- Brand & MCU Badge -->
+      <!-- Brand & Pipeline Info -->
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
           <i data-lucide="zap" class="w-6 h-6 text-white"></i>
@@ -26,66 +26,24 @@
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-lg font-bold tracking-wide text-white">AURA EV COCKPIT</h1>
-            <span id="active-system-badge" class="px-2 py-0.5 text-xs font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800 rounded-full">12V DC MOTOR (CONTINUOUS)</span>
-            <span class="px-2 py-0.5 text-xs font-semibold bg-purple-950 text-purple-300 border border-purple-800 rounded-full">TMS320F2800137 + ESP32-S + RF AI</span>
-            <span id="conn-badge" class="px-2 py-0.5 text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              LIVE STREAM (10 Hz)
+            <span class="px-2 py-0.5 text-xs font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800 rounded-full">12V DC MOTOR</span>
+            <span id="conn-badge" class="px-2 py-0.5 text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              LIVE STREAM (1 Hz)
             </span>
           </div>
-          <p class="text-xs text-slate-400">12V Continuous DC Motor • DS18B20 Temp • ACS712 5A Current • 0-25V Sensor • LM393 Speed • Random Forest Multi-Horizon AI</p>
+          <p class="text-xs text-slate-400 mt-0.5">Sensors: DS18B20 • ACS712 5A • 0–25V Module • LM393 Speed ➔ TMS320F2800137 ➔ ESP32-S Wi-Fi ➔ Random Forest AI</p>
         </div>
       </div>
 
-      <!-- Voltage System Selector (12V Priority) -->
-      <div class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/80 text-xs">
-        <span class="text-[10px] uppercase font-bold text-slate-400 px-2 flex items-center gap-1">
-          <i data-lucide="battery" class="w-3 h-3 text-cyan-400"></i> Bus:
-        </span>
-        <button onclick="setVoltageSystem(12)" id="btn-volt-12" class="volt-btn active px-2.5 py-1 rounded-lg font-bold text-white bg-cyan-600">12V (Active)</button>
-        <button onclick="setVoltageSystem(48)" id="btn-volt-48" class="volt-btn px-2.5 py-1 rounded-lg font-bold text-slate-400 hover:text-white">48V</button>
-        <button onclick="setVoltageSystem(72)" id="btn-volt-72" class="volt-btn px-2.5 py-1 rounded-lg font-bold text-slate-400 hover:text-white">72V</button>
-      </div>
-
-      <!-- Navigation Tabs -->
-      <div class="flex items-center bg-slate-800/70 p-1 rounded-xl border border-slate-700/60 text-xs font-medium">
-        <button onclick="switchTab('motor')" id="tab-btn-motor" class="tab-btn active px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
-          <i data-lucide="flame" class="w-3.5 h-3.5 text-cyan-400"></i> 12V Motor Thermal AI
-        </button>
-        <button onclick="switchTab('wiring')" id="tab-btn-wiring" class="tab-btn px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-amber-400 hover:text-white">
-          <i data-lucide="git-merge" class="w-3.5 h-3.5 text-amber-400"></i> Hardware & Wiring Map
-        </button>
-        <button onclick="switchTab('esp')" id="tab-btn-esp" class="tab-btn px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-cyan-400 hover:text-white">
-          <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-cyan-400"></i> Telemetry & XAI Model
-        </button>
-        <button onclick="switchTab('battery')" id="tab-btn-battery" class="tab-btn px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-white">
-          <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-emerald-400"></i> 12V Power & SoC
-        </button>
-      </div>
-        <button onclick="switchTab('road')" id="tab-btn-road" class="tab-btn px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-slate-400 hover:text-white">
-          <i data-lucide="map" class="w-3.5 h-3.5 text-amber-400"></i> Road Energy & Range
-        </button>
-      </div>
-
-      <!-- Quick Metrics Ribbon -->
-      <div class="flex items-center space-x-4 text-sm">
-        <div class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50 font-mono text-xs">
-          <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
-          <div>
-            <div class="text-[9px] text-slate-400 uppercase">System Tick</div>
-            <div id="mcu-tick" class="font-bold text-cyan-300">00:00.0</div>
-          </div>
+      <!-- Header Actions -->
+      <div class="flex items-center space-x-3 text-xs">
+        <div class="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/80 font-mono text-slate-300 flex items-center gap-2">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>Time:</span>
+          <span id="system-time" class="font-bold text-white">00:00:00</span>
         </div>
-        <div class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50 font-mono text-xs">
-          <i data-lucide="activity" class="w-4 h-4 text-purple-400"></i>
-          <div>
-            <div class="text-[9px] text-slate-400 uppercase">Electrical Freq</div>
-            <div id="val-fe" class="font-bold text-purple-300">200 Hz</div>
-          </div>
-        </div>
-
-        <!-- GitHub Repo Link Button -->
-        <a href="https://github.com/jonce9751961231/Ev_Dashboard" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 hover:border-cyan-500 transition-all text-xs font-semibold shadow-sm">
+        <a href="https://github.com/jonce9751961231/Ev_Dashboard" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 hover:border-cyan-500 transition-all font-semibold shadow-sm">
           <i data-lucide="github" class="w-4 h-4 text-white"></i>
           <span>GitHub</span>
         </a>
@@ -94,1072 +52,258 @@
     </div>
   </header>
 
-  <!-- Main Dashboard Container -->
+  <!-- Main Container -->
   <main class="max-w-7xl mx-auto p-6 space-y-6">
 
-    <!-- Row 1: Primary 12V DC Motor & Sensor Dials -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      
-      <!-- Speed / RPM Gauge Card (LM393 Sensor) -->
-      <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40 relative overflow-hidden">
-        <div class="flex justify-between items-start">
-          <span class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Motor Speed (LM393)</span>
-          <i data-lucide="gauge" class="w-4 h-4 text-cyan-400"></i>
-        </div>
-        <div class="mt-3 flex items-baseline space-x-2">
-          <span id="val-speed-kmh" class="text-4xl font-black tracking-tight text-cyan-400 font-mono">0.0</span>
-          <span class="text-sm font-semibold text-slate-400">km/h</span>
-        </div>
-        <div class="mt-3 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div id="bar-speed" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full w-0 transition-all duration-300"></div>
-        </div>
-        <div class="mt-2 flex justify-between text-[10px] text-slate-500 font-mono">
-          <span>0 RPM</span>
-          <span id="val-motor-rpm" class="text-cyan-300 font-bold">0 RPM (12V DC)</span>
-          <span>3000 RPM</span>
-        </div>
+    <!-- SECTION 1: LIVE SENSOR READINGS (5 CORE CARDS) -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs uppercase font-bold text-slate-400 tracking-wider flex items-center gap-2">
+          <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i> Real-Time Sensor Telemetry
+        </h2>
+        <span class="text-xs font-mono text-slate-500">Continuous Acquisition</span>
       </div>
 
-      <!-- Motor Torque / Load Envelope Card -->
-      <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40 relative overflow-hidden">
-        <div class="flex justify-between items-start">
-          <span class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Motor Shaft Torque</span>
-          <i data-lucide="rotate-cw" class="w-4 h-4 text-blue-400"></i>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        <!-- 1. Current Temperature (DS18B20) -->
+        <div class="glass-card p-5 rounded-2xl border border-rose-900/40 bg-gradient-to-b from-slate-900/80 to-rose-950/20 shadow-lg relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <span class="text-xs uppercase font-bold text-slate-400 tracking-wide">Current Temp</span>
+            <div class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400">
+              <i data-lucide="thermometer" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-1">
+            <span id="val-temp" class="text-4xl font-black text-rose-400 font-mono tracking-tight">--.-</span>
+            <span class="text-lg font-bold text-slate-400">°C</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
+            <span>Sensor: DS18B20</span>
+            <span class="text-emerald-400 font-semibold" id="temp-status">Normal</span>
+          </div>
         </div>
-        <div class="mt-3 flex items-baseline space-x-2">
-          <span id="val-torque" class="text-4xl font-black tracking-tight text-white font-mono">0.00</span>
-          <span class="text-sm font-semibold text-slate-400">Nm</span>
-        </div>
-        <div class="mt-3 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div id="bar-torque" class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full w-0 transition-all duration-300"></div>
-        </div>
-        <div class="mt-2 flex justify-between text-[10px] text-slate-500 font-mono">
-          <span>0 Nm</span>
-          <span id="val-derate-limit" class="text-emerald-400 font-semibold">Continuous Run</span>
-          <span id="val-max-torque-label">1.50 Nm</span>
-        </div>
-      </div>
 
-      <!-- Electrical Power (0-25V Sensor & ACS712 5A) -->
-      <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40 relative overflow-hidden">
-        <div class="flex justify-between items-start">
-          <span class="text-xs uppercase font-semibold text-slate-400 tracking-wider">DC Bus Power (V × I)</span>
-          <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+        <!-- 2. Voltage (0-25V Sensor) -->
+        <div class="glass-card p-5 rounded-2xl border border-amber-900/40 bg-gradient-to-b from-slate-900/80 to-amber-950/20 shadow-lg relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <span class="text-xs uppercase font-bold text-slate-400 tracking-wide">Voltage</span>
+            <div class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-1">
+            <span id="val-voltage" class="text-4xl font-black text-amber-400 font-mono tracking-tight">--.--</span>
+            <span class="text-lg font-bold text-slate-400">V</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
+            <span>Sensor: 0–25V</span>
+            <span class="text-slate-300">12V Bus</span>
+          </div>
         </div>
-        <div class="mt-3 flex items-baseline space-x-2">
-          <span id="val-power-kw" class="text-4xl font-black tracking-tight text-emerald-400 font-mono">0.0</span>
-          <span class="text-sm font-semibold text-slate-400">W</span>
-        </div>
-        <div class="mt-3 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div id="bar-power" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full w-0 transition-all duration-300"></div>
-        </div>
-        <div class="mt-2 flex justify-between text-[10px] text-slate-500 font-mono">
-          <span id="val-vdc">12.10 V (0-25V)</span>
-          <span id="val-irms">0.00 A (ACS712 5A)</span>
-          <span id="val-eff">60W Max</span>
-        </div>
-      </div>
 
-      <!-- DS18B20 Motor Thermal Safety Alert Box -->
-      <div id="derate-card" class="glass-card p-5 rounded-2xl border border-emerald-900/50 bg-emerald-950/20 relative overflow-hidden">
-        <div class="flex justify-between items-start">
-          <span class="text-xs uppercase font-semibold text-slate-400 tracking-wider">DS18B20 Thermal Guard</span>
-          <span id="status-badge" class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-emerald-900 text-emerald-300 border border-emerald-700">OPTIMAL</span>
+        <!-- 3. Current (ACS712 5A) -->
+        <div class="glass-card p-5 rounded-2xl border border-cyan-900/40 bg-gradient-to-b from-slate-900/80 to-cyan-950/20 shadow-lg relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <span class="text-xs uppercase font-bold text-slate-400 tracking-wide">Current</span>
+            <div class="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
+              <i data-lucide="gauge" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-1">
+            <span id="val-current" class="text-4xl font-black text-cyan-400 font-mono tracking-tight">-.--</span>
+            <span class="text-lg font-bold text-slate-400">A</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
+            <span>Sensor: ACS712</span>
+            <span class="text-slate-300">5A Range</span>
+          </div>
         </div>
-        <div class="mt-3">
-          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Motor Casing Safety Margin</div>
-          <div id="val-time-to-trip" class="text-2xl font-black tracking-tight text-emerald-400 font-mono mt-0.5">SAFE (+42°C Margin)</div>
-        </div>
-        <div class="mt-3 flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-2">
-          <span>Current Limit (ACS712):</span>
-          <span id="val-pump-pwm" class="font-mono font-bold text-cyan-400">5.0 A (Max Rated)</span>
-        </div>
-      </div>
 
+        <!-- 4. Motor Speed (LM393) -->
+        <div class="glass-card p-5 rounded-2xl border border-purple-900/40 bg-gradient-to-b from-slate-900/80 to-purple-950/20 shadow-lg relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <span class="text-xs uppercase font-bold text-slate-400 tracking-wide">Motor Speed</span>
+            <div class="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
+              <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-1">
+            <span id="val-rpm" class="text-4xl font-black text-purple-400 font-mono tracking-tight">----</span>
+            <span class="text-lg font-bold text-slate-400">RPM</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
+            <span>Sensor: LM393</span>
+            <span class="text-slate-300">Optical Disc</span>
+          </div>
+        </div>
+
+        <!-- 5. Electrical Power (V * I) -->
+        <div class="glass-card p-5 rounded-2xl border border-emerald-900/40 bg-gradient-to-b from-slate-900/80 to-emerald-950/20 shadow-lg relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <span class="text-xs uppercase font-bold text-slate-400 tracking-wide">Power (V × I)</span>
+            <div class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+              <i data-lucide="battery-charging" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-1">
+            <span id="val-power" class="text-4xl font-black text-emerald-400 font-mono tracking-tight">--.-</span>
+            <span class="text-lg font-bold text-slate-400">W</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
+            <span>Electrical Power</span>
+            <span class="text-slate-300">60W Max</span>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <!-- ==================== TAB 1: BLDC MOTOR THERMAL PREDICTION ==================== -->
-    <div id="tab-panel-motor" class="tab-panel space-y-6">
-      
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Multi-Horizon Future Prediction Chart (2 Cols) -->
-        <div class="lg:col-span-2 glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40 relative">
-          <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
-            <div>
-              <div class="flex items-center space-x-2">
-                <h2 class="text-base font-bold text-white tracking-wide">3-PHASE BLDC THERMAL FORECAST</h2>
-                <span class="px-2 py-0.5 text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-800 rounded-md">
-                  STATOR COPPER + ROTOR MAGNET AI
-                </span>
-              </div>
-              <p class="text-xs text-slate-400 mt-0.5">Forecasts Stator Insulation Rise & NdFeB Magnet Demagnetization Risk (+1m, +5m, +15m, +30m)</p>
-            </div>
-
-            <!-- Quick Badges -->
-            <div class="flex items-center space-x-2 text-xs font-mono">
-              <div class="bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
-                <span class="text-slate-400">+5m Stator:</span> <span id="badge-pred-5m" class="font-bold text-amber-400">--.-°C</span>
-              </div>
-              <div class="bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
-                <span class="text-slate-400">+5m Rotor Magnet:</span> <span id="badge-pred-rotor-5m" class="font-bold text-purple-400">--.-°C</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Chart Canvas -->
-          <div class="relative h-72 mt-4">
-            <canvas id="predictionChart"></canvas>
-          </div>
-
-          <!-- Safety Threshold Legend -->
-          <div class="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-            <div class="bg-slate-800/40 p-2 rounded-xl border border-slate-700/40">
-              <div class="text-[10px] text-slate-400">Stator Winding Warn</div>
-              <div class="font-mono font-bold text-amber-400">110.0 °C</div>
-            </div>
-            <div class="bg-slate-800/40 p-2 rounded-xl border border-slate-700/40">
-              <div class="text-[10px] text-slate-400">Stator Class F Trip</div>
-              <div class="font-mono font-bold text-rose-500">135.0 °C</div>
-            </div>
-            <div class="bg-slate-800/40 p-2 rounded-xl border border-slate-700/40">
-              <div class="text-[10px] text-slate-400">NdFeB Magnet Warn</div>
-              <div class="font-mono font-bold text-amber-400">90.0 °C</div>
-            </div>
-            <div class="bg-slate-800/40 p-2 rounded-xl border border-slate-700/40">
-              <div class="text-[10px] text-slate-400">Demag Critical Trip</div>
-              <div class="font-mono font-bold text-rose-500">115.0 °C</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- BLDC 4-Node Live Thermal Spatial Map -->
-        <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 class="text-sm font-bold text-white uppercase tracking-wider">BLDC 4-Node Thermal Spatial Map</h3>
-              <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
-            </div>
-
-            <!-- Visual Cross Section Nodes -->
-            <div class="mt-4 p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5 font-mono text-xs">
-              
-              <!-- Node 1: 3-Phase Stator Windings -->
-              <div class="p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3 h-3 rounded-full bg-cyan-400 shadow shadow-cyan-400"></div>
-                  <div>
-                    <div class="font-bold text-slate-200">1. Stator Windings (3-Phase)</div>
-                    <div class="text-[9px] text-slate-400">DS18B20 / NTC Measurement</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div id="temp-node-stator" class="text-sm font-bold text-cyan-300">--.- °C</div>
-                  <div id="rate-node-stator" class="text-[9px] text-slate-400">+0.00 °C/s</div>
-                </div>
-              </div>
-
-              <!-- Node 2: Stator Laminated Core -->
-              <div class="p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3 h-3 rounded-full bg-indigo-400"></div>
-                  <div>
-                    <div class="font-bold text-slate-200">2. Stator Teeth / Steel Core</div>
-                    <div class="text-[9px] text-slate-400">High-Freq Iron Losses</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div id="temp-node-core" class="text-sm font-bold text-indigo-300">--.- °C</div>
-                </div>
-              </div>
-
-              <!-- Node 3: Rotor Permanent Magnets (NdFeB) -->
-              <div class="p-2.5 rounded-xl border border-purple-500/30 bg-purple-950/20 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3 h-3 rounded-full bg-purple-400 shadow shadow-purple-400"></div>
-                  <div>
-                    <div class="font-bold text-slate-200">3. Rotor Permanent Magnets</div>
-                    <div class="text-[9px] text-slate-400">NdFeB Eddy Current Losses</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div id="temp-node-rotor" class="text-sm font-bold text-purple-300">--.- °C</div>
-                  <div id="rate-node-rotor" class="text-[9px] text-slate-400">+0.00 °C/s</div>
-                </div>
-              </div>
-
-              <!-- Node 4: Aluminum Housing & Airflow -->
-              <div class="p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3 h-3 rounded-full bg-slate-500"></div>
-                  <div>
-                    <div class="font-bold text-slate-200">4. Aluminum Housing</div>
-                    <div class="text-[9px] text-slate-400">Convective Airflow Dissipation</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div id="temp-node-frame" class="text-sm font-bold text-slate-300">--.- °C</div>
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-
-          <!-- Instantaneous Power Losses Breakdown -->
-          <div class="mt-4 pt-3 border-t border-slate-800 space-y-1.5 text-xs">
-            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Instantaneous Loss Dissipation</div>
-            <div class="flex justify-between text-slate-400 font-mono">
-              <span>Stator Copper (Joule) Loss:</span>
-              <span id="loss-copper" class="text-cyan-300 font-bold">0.0 W</span>
-            </div>
-            <div class="flex justify-between text-slate-400 font-mono">
-              <span>Iron Core Loss (Steinmetz):</span>
-              <span id="loss-iron" class="text-indigo-300 font-bold">0.0 W</span>
-            </div>
-            <div class="flex justify-between text-slate-400 font-mono">
-              <span>Rotor Magnet Eddy Loss:</span>
-              <span id="loss-rotor" class="text-purple-300 font-bold">0.0 W</span>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- ==================== TAB 2: ESP CSV & AI PREDICTOR (NEW!) ==================== -->
-    <div id="tab-panel-esp" class="tab-panel hidden space-y-6">
-
-      <!-- Upload Zone & Connection Bar -->
-      <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40">
-        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div>
-            <div class="flex items-center space-x-2">
-              <h2 class="text-lg font-bold text-white tracking-wide">ESP CSV INGESTION & AI TEMPERATURE PREDICTOR</h2>
-              <span class="px-2 py-0.5 text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full">
-                ON-CHIP & BROWSER AI
-              </span>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">
-              Upload any telemetry CSV recorded by your ESP32 / ESP8266 or connect directly over USB Serial to forecast future temperatures.
-            </p>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="loadSampleCSV('48v')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-cyan-300 border border-cyan-800/60 hover:bg-slate-700 transition-all flex items-center gap-1.5">
-              <span>⚡</span> Load 48V Commute CSV
-            </button>
-            <button onclick="loadSampleCSV('72v')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-amber-300 border border-amber-800/60 hover:bg-slate-700 transition-all flex items-center gap-1.5">
-              <span>🏔️</span> Load 72V Hill Climb CSV
-            </button>
-            <button onclick="loadSampleCSV('96v')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-rose-300 border border-rose-800/60 hover:bg-slate-700 transition-all flex items-center gap-1.5">
-              <span>🏎️</span> Load 96V High Speed CSV
-            </button>
-            <button onclick="connectWebSerial()" id="btn-web-serial" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-90 transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20">
-              <i data-lucide="usb" class="w-3.5 h-3.5"></i> Connect ESP32 (USB)
-            </button>
-          </div>
-        </div>
-
-        <!-- Drag & Drop Zone -->
-        <div id="csv-dropzone" onclick="document.getElementById('csv-file-input').click()" class="mt-4 p-8 border-2 border-dashed border-slate-700 hover:border-cyan-500/80 rounded-2xl text-center cursor-pointer transition-all bg-slate-950/40">
-          <input type="file" id="csv-file-input" accept=".csv" class="hidden" onchange="handleCSVFileSelect(event)">
-          <div class="flex flex-col items-center justify-center space-y-2">
-            <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <i data-lucide="upload-cloud" class="w-6 h-6"></i>
-            </div>
-            <div class="text-sm font-bold text-slate-200">
-              Drop your ESP32 <span class="font-mono text-cyan-400">telemetry.csv</span> file here, or <span class="text-cyan-400 underline">browse</span>
-            </div>
-            <div class="text-xs text-slate-500">
-              Supports CSV columns: <code class="text-slate-400">timestamp_ms, voltage_v, current_a, speed_rpm, stator_temp_c, (ambient_temp_c, power_w)</code>
-            </div>
-          </div>
-        </div>
-
-        <div id="csv-file-badge" class="mt-3 hidden items-center justify-between text-xs bg-slate-800/60 border border-slate-700/60 px-4 py-2 rounded-xl font-mono text-cyan-300">
-          <span id="csv-file-name">Loaded: bldc_72v_hill_climb.csv (25 rows)</span>
-          <span class="text-slate-400 text-[11px]">AI Multi-Horizon Forecast Ready</span>
-        </div>
-      </div>
-
-      <!-- Multi-Horizon AI Prediction Results Ribbon -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 font-mono">
-        <div class="glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/50">
-          <div class="text-[10px] text-slate-400 uppercase">Current Temp</div>
-          <div id="esp-card-cur-temp" class="text-2xl font-black text-cyan-400 mt-1">--.- °C</div>
-          <div id="esp-card-cur-loss" class="text-[10px] text-slate-500 mt-0.5">Loss: 0 W</div>
-        </div>
-        <div class="glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/50">
-          <div class="text-[10px] text-slate-400 uppercase">+1m Forecast</div>
-          <div id="esp-card-pred-1m" class="text-2xl font-black text-blue-400 mt-1">--.- °C</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Short-term transient</div>
-        </div>
-        <div class="glass-card p-4 rounded-2xl border border-amber-800/40 bg-amber-950/10">
-          <div class="text-[10px] text-amber-400 uppercase font-bold">+5m Critical Horizon</div>
-          <div id="esp-card-pred-5m" class="text-2xl font-black text-amber-400 mt-1">--.- °C</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Derating check point</div>
-        </div>
-        <div class="glass-card p-4 rounded-2xl border border-purple-800/40 bg-purple-950/10">
-          <div class="text-[10px] text-purple-400 uppercase font-bold">Rotor Demag (+5m)</div>
-          <div id="esp-card-rotor-5m" class="text-2xl font-black text-purple-400 mt-1">--.- °C</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">NdFeB limit: 90°C</div>
-        </div>
-        <div class="glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/50">
-          <div class="text-[10px] text-slate-400 uppercase">+15m Forecast</div>
-          <div id="esp-card-pred-15m" class="text-2xl font-black text-indigo-400 mt-1">--.- °C</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Medium-term soak</div>
-        </div>
-        <div class="glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/50">
-          <div class="text-[10px] text-slate-400 uppercase">+30m / Asymptote</div>
-          <div id="esp-card-pred-30m" class="text-2xl font-black text-teal-400 mt-1">--.- °C</div>
-          <div id="esp-card-asymp" class="text-[10px] text-slate-500 mt-0.5">T_inf: --.- °C</div>
-        </div>
-      </div>
-
-      <!-- Main Forecast Chart & Derate Alert Box -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Forecast Chart (2 Cols) -->
-        <div class="lg:col-span-2 glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40">
-          <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
-            <div>
-              <h3 class="text-base font-bold text-white tracking-wide">ESP TELEMETRY & AI PREDICTIVE TRAJECTORY</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Measured Stator History from CSV vs Multi-Horizon Forecast Curves</p>
-            </div>
-            <div id="esp-status-pill" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800">
-              OPTIMAL (Safe Operation)
-            </div>
-          </div>
-
-          <div class="relative h-80 mt-4">
-            <canvas id="csvPredictionChart"></canvas>
-          </div>
-
-          <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400 font-mono">
-            <div>Thresholds: <span class="text-amber-400 font-bold">110°C Winding Warn</span> | <span class="text-rose-500 font-bold">135°C Trip</span> | <span class="text-purple-400 font-bold">90°C Demag Warn</span></div>
-            <div id="esp-time-to-trip-label" class="text-emerald-400 font-bold">Time-to-Trip: SAFE</div>
-          </div>
-        </div>
-
-        <!-- Safety Guard & Scrubber Controls -->
-        <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 class="text-sm font-bold text-white uppercase tracking-wider">AI Thermal Protection</h3>
-              <i data-lucide="shield-alert" class="w-4 h-4 text-cyan-400"></i>
-            </div>
-
-            <!-- Derate Advisory Card -->
-            <div id="esp-derate-banner" class="mt-4 p-4 rounded-2xl bg-emerald-950/20 border border-emerald-800 text-xs space-y-2">
-              <div class="font-bold text-emerald-400 flex items-center gap-1.5">
-                <i data-lucide="check-circle" class="w-4 h-4"></i> No Throttle Derating Required
-              </div>
-              <p class="text-slate-400 text-[11px]">
-                Predicted temperatures at all horizons remain within Class F insulation and NdFeB magnet continuous operating margins.
-              </p>
-            </div>
-
-            <!-- Scrubber / Playback Control -->
-            <div class="mt-5 space-y-2">
-              <div class="flex justify-between items-center text-xs">
-                <span class="font-bold text-slate-300">Inspect Timestamp:</span>
-                <span id="esp-scrubber-val" class="font-mono text-cyan-400 font-bold">Row 1 (0 ms)</span>
-              </div>
-              <input type="range" id="esp-scrubber" min="0" max="10" value="0" oninput="scrubCSVRow(this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-              
-              <div class="flex items-center justify-between pt-2">
-                <button onclick="toggleCSVPlayback()" id="btn-csv-play" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all flex items-center gap-1">
-                  <i data-lucide="play" class="w-3 h-3"></i> Play Telemetry
-                </button>
-                <button onclick="downloadProcessedResults()" class="px-3 py-1 rounded-xl text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-800 hover:bg-cyan-900 transition-all flex items-center gap-1">
-                  <i data-lucide="download" class="w-3 h-3"></i> Export AI JSON
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          <div class="mt-6 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between items-center">
-            <span>Model Execution:</span>
-            <span class="font-mono font-bold text-cyan-300">Physics-Informed ML (Client-Side)</span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Random Forest Multi-Horizon AI & Explainable AI (XAI) Panel -->
-      <div class="glass-card p-6 rounded-3xl border border-purple-900/60 bg-gradient-to-br from-slate-900/80 via-purple-950/20 to-slate-900/80 shadow-xl shadow-purple-950/20">
-        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-purple-800/40">
-          <div>
-            <div class="flex items-center space-x-2">
-              <span class="px-2.5 py-1 text-xs font-black bg-purple-950 text-purple-300 border border-purple-700 rounded-lg flex items-center gap-1.5 shadow-sm">
-                <span>🌲</span> RANDOM FOREST REGRESSOR (100 TREES)
-              </span>
-              <span id="rf-stream-badge" class="px-2.5 py-1 text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 rounded-lg flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-amber-400"></span> STANDBY / CLIENT-SIDE READY
-              </span>
-            </div>
-            <h3 class="text-base font-bold text-white mt-1.5 tracking-wide">Physics-Informed Multi-Horizon Random Forest AI Engine</h3>
-            <p class="text-xs text-slate-400">Trained on 12V DC Motor continuous run thermodynamics (Joule loss I²R, armature dynamics, DS18B20 casing temperature, LM393 speed, ACS712 current) for sub-2ms edge & cloud forecasting.</p>
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <button onclick="loadSampleCSV('12v')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-700 transition-all flex items-center gap-1.5 shadow-md">
-              <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Test 12V RF Predictor
-            </button>
-            <a href="../google_colab/EV_48V_Random_Forest_Thermal_Prediction.ipynb" target="_blank" download class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center gap-1">
-              <i data-lucide="external-link" class="w-3.5 h-3.5 text-cyan-400"></i> Open Colab Notebook
-            </a>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-          <!-- XAI Feature Importance Chart (2 Cols) -->
-          <div class="lg:col-span-2">
-            <div class="flex items-center justify-between pb-2">
-              <span class="text-xs uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5">
-                <i data-lucide="bar-chart-2" class="w-4 h-4 text-purple-400"></i> Explainable AI (XAI) - Sensor Feature Importance (%)
-              </span>
-              <span class="text-[11px] font-mono text-purple-300">Variance Reduction across 100 Trees</span>
-            </div>
-            <div class="relative h-56 mt-1">
-              <canvas id="rfFeatureChart"></canvas>
-            </div>
-          </div>
-
-          <!-- Multi-Horizon Validation Metrics -->
-          <div class="flex flex-col justify-between p-4 rounded-2xl bg-slate-950/60 border border-purple-900/40">
-            <div>
-              <div class="text-xs uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-800">
-                <i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i> Multi-Horizon Validation Accuracy
-              </div>
-              <div class="mt-3 space-y-2 font-mono text-xs">
-                <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between items-center">
-                  <div>
-                    <span class="text-slate-400">+1 Min Horizon:</span>
-                    <div class="text-[10px] text-slate-500">Short-term transient</div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-bold text-emerald-400">R² = 0.9954</div>
-                    <div class="text-[10px] text-slate-400">MAE: 0.12 °C</div>
-                  </div>
-                </div>
-                <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between items-center">
-                  <div>
-                    <span class="text-slate-400">+5 Min Horizon:</span>
-                    <div class="text-[10px] text-slate-500">Continuous run check</div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-bold text-cyan-400">R² = 0.9806</div>
-                    <div class="text-[10px] text-slate-400">MAE: 0.24 °C</div>
-                  </div>
-                </div>
-                <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between items-center">
-                  <div>
-                    <span class="text-slate-400">+15 Min Horizon:</span>
-                    <div class="text-[10px] text-slate-500">Medium-term soak</div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-bold text-blue-400">R² = 0.9859</div>
-                    <div class="text-[10px] text-slate-400">MAE: 0.21 °C</div>
-                  </div>
-                </div>
-                <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between items-center">
-                  <div>
-                    <span class="text-slate-400">+30 Min Horizon:</span>
-                    <div class="text-[10px] text-slate-500">Continuous thermal equilibrium</div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-bold text-purple-400">R² = 0.9860</div>
-                    <div class="text-[10px] text-slate-400">MAE: 0.22 °C</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-              <span>Inference Latency:</span>
-              <span class="font-mono font-bold text-emerald-400">< 1.8 ms</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Raw CSV Telemetry Data Table Explorer -->
-      <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div>
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">CSV Telemetry Data Explorer</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Inspecting recorded data points and real-time AI model predictions</p>
-          </div>
-          <span id="esp-table-row-count" class="text-xs font-mono text-slate-400">0 records</span>
-        </div>
-
-        <div class="mt-4 overflow-x-auto max-h-60 rounded-xl border border-slate-800">
-          <table class="w-full text-left text-xs font-mono">
-            <thead class="bg-slate-950/80 text-slate-400 sticky top-0 border-b border-slate-800">
-              <tr>
-                <th class="p-2.5">Time (ms)</th>
-                <th class="p-2.5">Bus Voltage</th>
-                <th class="p-2.5">Current (A)</th>
-                <th class="p-2.5">Speed (RPM)</th>
-                <th class="p-2.5">Power (W)</th>
-                <th class="p-2.5">Stator Temp</th>
-                <th class="p-2.5 text-amber-400">+5m Pred</th>
-                <th class="p-2.5 text-purple-400">Rotor +5m</th>
-                <th class="p-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody id="esp-csv-table-body" class="divide-y divide-slate-800/60 bg-slate-900/30 text-slate-300">
-              <tr>
-                <td colspan="9" class="p-4 text-center text-slate-500 italic">No CSV loaded yet. Drag-and-drop a file or click a sample button above.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ==================== TAB: HARDWARE & WIRE-BY-WIRE WIRING MAP ==================== -->
-    <div id="tab-panel-wiring" class="tab-panel hidden space-y-6">
-      
-      <!-- Top Overview Banner -->
-      <div class="glass-card p-6 rounded-3xl border border-amber-900/60 bg-gradient-to-r from-amber-950/30 via-slate-900/80 to-slate-900/80 shadow-xl">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div class="flex items-center space-x-2">
-              <span class="px-2.5 py-1 text-xs font-black bg-amber-950 text-amber-300 border border-amber-700 rounded-lg flex items-center gap-1.5 shadow-sm">
-                <i data-lucide="cpu" class="w-4 h-4"></i> HARDWARE PIPELINE & SCHEMATIC
-              </span>
-              <span class="px-2.5 py-1 text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-lg flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ALL 4 SENSORS VERIFIED
-              </span>
-            </div>
-            <h2 class="text-lg font-bold text-white mt-2 tracking-wide">12V DC Motor Continuous Testbed Wire-by-Wire Architecture</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Direct constant 12V motor run (no MOSFETs/switches) • TMS320F2800137 Sensor Acquisition • ESP32-S Wi-Fi Stream • Laptop AI Predictor</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-slate-800 text-cyan-300 border border-slate-700">
-              Pipeline: Sensors ➔ C2000 ➔ UART ➔ ESP32-S ➔ Wi-Fi ➔ Laptop
+    <!-- SECTION 2: RANDOM FOREST PREDICTED TEMPERATURE -->
+    <div class="glass-card p-6 rounded-3xl border border-purple-900/60 bg-gradient-to-br from-slate-900/90 via-purple-950/20 to-slate-900/90 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-purple-800/40">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-1 text-xs font-bold bg-purple-950 text-purple-300 border border-purple-700 rounded-lg flex items-center gap-1.5 shadow-sm">
+              <span>🌲</span> RANDOM FOREST PREDICTOR (100 TREES)
+            </span>
+            <span class="px-2.5 py-1 text-xs font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-lg">
+              Accuracy: R² = 99.54%
             </span>
           </div>
+          <h3 class="text-base font-bold text-white mt-1.5 tracking-wide">Multi-Horizon Future Temperature Forecasts</h3>
+          <p class="text-xs text-slate-400">Predicts future thermal rise on the 12V DC motor casing across multiple horizons using real-time sensor features.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono text-cyan-300 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl">
+            Model Latency: &lt; 1.8 ms
+          </span>
         </div>
       </div>
 
-      <!-- Grid: The 4 Sensors Pin Assignments -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Prediction Cards Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
         
-        <!-- Sensor 1: 0-25V Voltage Sensor -->
-        <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40">
-          <div class="flex justify-between items-start">
-            <span class="text-xs uppercase font-bold text-amber-400">1. Voltage Sensor</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">0–25V Range</span>
+        <!-- +1 Min -->
+        <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-cyan-500/50 transition-all">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span class="font-bold text-cyan-400">+1 Min Horizon</span>
+            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-cyan-400"></i>
           </div>
-          <div class="mt-3 font-mono text-xs space-y-1.5">
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">Signal (S):</span>
-              <span class="font-bold text-cyan-300">C2000 ADCINA0 (J3-27)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">Minus (–):</span>
-              <span class="font-bold text-slate-300">Common GND (J1-22)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">VCC Screw:</span>
-              <span class="font-bold text-rose-400">+12V Supply Line</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">GND Screw:</span>
-              <span class="font-bold text-slate-400">12V Power GND</span>
-            </div>
+          <div class="mt-2 flex items-baseline space-x-1">
+            <span id="pred-1m" class="text-3xl font-black text-white font-mono">--.-</span>
+            <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Short-term transient (R²=99.5%)</div>
         </div>
 
-        <!-- Sensor 2: ACS712 5A Current Sensor -->
-        <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40">
-          <div class="flex justify-between items-start">
-            <span class="text-xs uppercase font-bold text-cyan-400">2. Current Sensor</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">ACS712 5A</span>
+        <!-- +5 Min -->
+        <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/50 transition-all">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span class="font-bold text-amber-400">+5 Min Horizon</span>
+            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-amber-400"></i>
           </div>
-          <div class="mt-3 font-mono text-xs space-y-1.5">
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">OUT Pin:</span>
-              <span class="font-bold text-cyan-300">C2000 ADCINA1 (J3-28)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">VCC Pin:</span>
-              <span class="font-bold text-rose-300">5.0V Power (J1-21)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">GND Pin:</span>
-              <span class="font-bold text-slate-300">Common GND (J1-22)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">IP+ / IP-:</span>
-              <span class="font-bold text-amber-300">In-Series with +12V</span>
-            </div>
+          <div class="mt-2 flex items-baseline space-x-1">
+            <span id="pred-5m" class="text-3xl font-black text-amber-300 font-mono">--.-</span>
+            <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Continuous run check (R²=98.1%)</div>
         </div>
 
-        <!-- Sensor 3: LM393 Speed Measuring Sensor -->
-        <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40">
-          <div class="flex justify-between items-start">
-            <span class="text-xs uppercase font-bold text-purple-400">3. Speed Sensor</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">LM393 Optical</span>
+        <!-- +15 Min -->
+        <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-blue-500/50 transition-all">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span class="font-bold text-blue-400">+15 Min Horizon</span>
+            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-blue-400"></i>
           </div>
-          <div class="mt-3 font-mono text-xs space-y-1.5">
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">D0 (Digital):</span>
-              <span class="font-bold text-purple-300">C2000 GPIO 0 (J2-13)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">VCC Pin:</span>
-              <span class="font-bold text-emerald-300">3.3V Power (J1-1)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">GND Pin:</span>
-              <span class="font-bold text-slate-300">Common GND (J1-22)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">Encoder Disc:</span>
-              <span class="font-bold text-cyan-300">20-Slot on Shaft</span>
-            </div>
+          <div class="mt-2 flex items-baseline space-x-1">
+            <span id="pred-15m" class="text-3xl font-black text-blue-300 font-mono">--.-</span>
+            <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Medium-term soak (R²=98.6%)</div>
         </div>
 
-        <!-- Sensor 4: DS18B20 Temp Probe -->
-        <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40">
-          <div class="flex justify-between items-start">
-            <span class="text-xs uppercase font-bold text-rose-400">4. Temperature Probe</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">DS18B20 1-Wire</span>
+        <!-- +30 Min -->
+        <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-purple-500/50 transition-all">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span class="font-bold text-purple-400">+30 Min Horizon</span>
+            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-purple-400"></i>
           </div>
-          <div class="mt-3 font-mono text-xs space-y-1.5">
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">DATA (Yellow):</span>
-              <span class="font-bold text-rose-300">C2000 GPIO 3 (J1-6)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">Pull-up:</span>
-              <span class="font-bold text-amber-300">4.7 kΩ to 3.3V</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">VCC (Red):</span>
-              <span class="font-bold text-emerald-300">3.3V Power (J1-1)</span>
-            </div>
-            <div class="flex justify-between p-1.5 bg-slate-950/60 rounded-lg">
-              <span class="text-slate-400">GND (Black):</span>
-              <span class="font-bold text-slate-300">Common GND (J1-22)</span>
-            </div>
+          <div class="mt-2 flex items-baseline space-x-1">
+            <span id="pred-30m" class="text-3xl font-black text-purple-300 font-mono">--.-</span>
+            <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Thermal equilibrium (R²=98.6%)</div>
         </div>
 
       </div>
-
-      <!-- Wire-by-Wire Wiring Table -->
-      <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div>
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Complete Wire-by-Wire Connection Table</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Match each wire color directly to your physical breadboard and headers</p>
-          </div>
-          <span class="text-xs font-mono text-cyan-400 font-bold">20 Wires Total</span>
-        </div>
-
-        <div class="mt-4 overflow-x-auto rounded-xl border border-slate-800">
-          <table class="w-full text-left font-mono text-xs">
-            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-              <tr>
-                <th class="py-2.5 px-4">Wire #</th>
-                <th class="py-2.5 px-4">Color</th>
-                <th class="py-2.5 px-4">Origin Pin</th>
-                <th class="py-2.5 px-4">Destination Pin</th>
-                <th class="py-2.5 px-4">Purpose</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800/60 text-slate-300">
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-01</td>
-                <td class="py-2 px-4 text-rose-400">🔴 Thick Red</td>
-                <td class="py-2 px-4">12V Power Supply (+)</td>
-                <td class="py-2 px-4">ACS712 Screw Terminal 1 (IP+)</td>
-                <td class="py-2 px-4 text-slate-400">Feeds +12V through current sensor</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-02</td>
-                <td class="py-2 px-4 text-rose-400">🔴 Thick Red</td>
-                <td class="py-2 px-4">ACS712 Screw Terminal 2 (IP-)</td>
-                <td class="py-2 px-4">12V DC Motor (+) Terminal</td>
-                <td class="py-2 px-4 text-slate-400">Motor positive continuous feed</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-03</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Thick Black</td>
-                <td class="py-2 px-4">12V DC Motor (–) Terminal</td>
-                <td class="py-2 px-4">12V Power Supply (–) GND</td>
-                <td class="py-2 px-4 text-slate-400">Motor ground return (continuous run)</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-04</td>
-                <td class="py-2 px-4 text-rose-400">🔴 Red</td>
-                <td class="py-2 px-4">12V Power Supply (+)</td>
-                <td class="py-2 px-4">Voltage Sensor "VCC" Screw</td>
-                <td class="py-2 px-4 text-slate-400">Measures +12V DC Bus</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-05</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Black</td>
-                <td class="py-2 px-4">12V Power Supply (–)</td>
-                <td class="py-2 px-4">Voltage Sensor "GND" Screw</td>
-                <td class="py-2 px-4 text-slate-400">Voltage sensor ground reference</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-06</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Black</td>
-                <td class="py-2 px-4">12V Power Supply (–)</td>
-                <td class="py-2 px-4 font-bold text-amber-300">C2000 GND (J1 Pin 22)</td>
-                <td class="py-2 px-4 text-amber-300">Mandatory Common Ground Reference</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-07</td>
-                <td class="py-2 px-4 text-amber-400">🟡 Yellow</td>
-                <td class="py-2 px-4">Voltage Sensor S (Signal)</td>
-                <td class="py-2 px-4 text-cyan-300">C2000 ADCINA0 (J3 Pin 27)</td>
-                <td class="py-2 px-4 text-slate-400">Stepped down 2.40V analog voltage</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-08</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Black</td>
-                <td class="py-2 px-4">Voltage Sensor – (Minus)</td>
-                <td class="py-2 px-4">C2000 GND (J1 Pin 22)</td>
-                <td class="py-2 px-4 text-slate-400">Signal ground reference</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-09</td>
-                <td class="py-2 px-4 text-rose-400">🔴 Red</td>
-                <td class="py-2 px-4">C2000 5.0V (J1 Pin 21)</td>
-                <td class="py-2 px-4">ACS712 VCC Pin</td>
-                <td class="py-2 px-4 text-slate-400">5.0V power for Hall effect sensor</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-10</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Black</td>
-                <td class="py-2 px-4">ACS712 GND Pin</td>
-                <td class="py-2 px-4">C2000 GND (J1 Pin 22)</td>
-                <td class="py-2 px-4 text-slate-400">Current sensor ground</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-11</td>
-                <td class="py-2 px-4 text-blue-400">🔵 Blue</td>
-                <td class="py-2 px-4">ACS712 OUT Pin</td>
-                <td class="py-2 px-4 text-cyan-300">C2000 ADCINA1 (J3 Pin 28)</td>
-                <td class="py-2 px-4 text-slate-400">Analog current voltage (~2.5V zero point)</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-12</td>
-                <td class="py-2 px-4 text-emerald-400">🔴 Red</td>
-                <td class="py-2 px-4">C2000 3.3V (J1 Pin 1)</td>
-                <td class="py-2 px-4">LM393 Speed VCC</td>
-                <td class="py-2 px-4 text-slate-400">3.3V logic power for optical sensor</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-13</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Black</td>
-                <td class="py-2 px-4">LM393 Speed GND</td>
-                <td class="py-2 px-4">C2000 GND (J1 Pin 22)</td>
-                <td class="py-2 px-4 text-slate-400">Speed sensor ground</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-14</td>
-                <td class="py-2 px-4 text-purple-400">🟠 Orange</td>
-                <td class="py-2 px-4">LM393 Speed D0</td>
-                <td class="py-2 px-4 text-cyan-300">C2000 GPIO 0 (J2 Pin 13)</td>
-                <td class="py-2 px-4 text-slate-400">Optical pulse interrupts (XINT1)</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-15</td>
-                <td class="py-2 px-4 text-emerald-400">🔴 Red</td>
-                <td class="py-2 px-4">C2000 3.3V (J1 Pin 1)</td>
-                <td class="py-2 px-4">DS18B20 VCC (Red Wire)</td>
-                <td class="py-2 px-4 text-slate-400">3.3V power to temp probe</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-16</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Black</td>
-                <td class="py-2 px-4">DS18B20 GND (Black Wire)</td>
-                <td class="py-2 px-4">C2000 GND (J1 Pin 22)</td>
-                <td class="py-2 px-4 text-slate-400">Temp probe ground</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-17</td>
-                <td class="py-2 px-4 text-rose-400">🟡 Yellow</td>
-                <td class="py-2 px-4">DS18B20 DATA (Yellow Wire)</td>
-                <td class="py-2 px-4 text-cyan-300">C2000 GPIO 3 (J1 Pin 6)</td>
-                <td class="py-2 px-4 text-slate-400">1-Wire digital temperature line</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">R-01</td>
-                <td class="py-2 px-4 text-amber-300">🟤 Resistor</td>
-                <td class="py-2 px-4">DS18B20 Yellow (DATA)</td>
-                <td class="py-2 px-4">DS18B20 Red (3.3V)</td>
-                <td class="py-2 px-4 text-amber-300">4.7 kΩ Pull-up Resistor</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-18</td>
-                <td class="py-2 px-4 text-emerald-400">🟢 Green</td>
-                <td class="py-2 px-4">C2000 GPIO 29 (SCIA_TX)</td>
-                <td class="py-2 px-4 text-cyan-300">ESP32-S GPIO 16 (RX2)</td>
-                <td class="py-2 px-4 text-slate-400">UART telemetry from C2000 to ESP32</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-19</td>
-                <td class="py-2 px-4 text-blue-400">🔵 Blue</td>
-                <td class="py-2 px-4">ESP32-S GPIO 17 (TX2)</td>
-                <td class="py-2 px-4">C2000 GPIO 28 (SCIA_RX)</td>
-                <td class="py-2 px-4 text-slate-400">Command responses back to C2000</td>
-              </tr>
-              <tr class="hover:bg-slate-800/30">
-                <td class="py-2 px-4 font-bold text-cyan-300">W-20</td>
-                <td class="py-2 px-4 text-slate-400">⚫ Black</td>
-                <td class="py-2 px-4">C2000 GND (J1 Pin 22)</td>
-                <td class="py-2 px-4 font-bold text-cyan-300">ESP32-S GND Pin</td>
-                <td class="py-2 px-4 text-slate-400">Common UART reference ground</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
 
-    <!-- ==================== TAB 3: BATTERY PACK & SOC ==================== -->
-    <div id="tab-panel-battery" class="tab-panel hidden space-y-6">
-      
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Battery SoC & Pack Voltage Chart (2 Cols) -->
-        <div class="lg:col-span-2 glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40">
-          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
-            <div>
-              <h2 class="text-base font-bold text-white tracking-wide">BATTERY PACK THERMAL & SOC PROFILE</h2>
-              <p class="text-xs text-slate-400 mt-0.5">Joule Heating, Entropic Heat Exchange, and Coulomb Counting Dynamics</p>
-            </div>
-            <div class="flex items-center space-x-2 text-xs font-mono">
-              <span id="badge-battery-soc" class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-1 rounded-lg font-bold">85% SoC</span>
-              <span id="badge-battery-temp" class="bg-slate-800 text-cyan-300 border border-slate-700 px-2.5 py-1 rounded-lg font-bold">28.4 °C</span>
-            </div>
-          </div>
-
-          <div class="relative h-72 mt-4">
-            <canvas id="batteryChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Battery Pack Health & Specifications -->
-        <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Pack Health & Architecture</h3>
-              <i data-lucide="battery-charging" class="w-4 h-4 text-emerald-400"></i>
-            </div>
-
-            <div class="mt-4 space-y-3 font-mono text-xs">
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Pack Chemistry:</span>
-                <span class="font-bold text-slate-200">Li-Ion NMC (Automotive Grade)</span>
-              </div>
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Nominal Bus Voltage:</span>
-                <span id="val-batt-nom-volt" class="font-bold text-cyan-400">72.0 V (20S Configuration)</span>
-              </div>
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Pack Capacity:</span>
-                <span id="val-batt-cap" class="font-bold text-emerald-400">50 Ah (3.6 kWh)</span>
-              </div>
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Thermal Runaway Limit:</span>
-                <span class="font-bold text-rose-400">60.0 °C</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between items-center">
-            <span>Thermal Safety Guard:</span>
-            <span class="font-mono font-bold text-emerald-400">ACTIVE & SECURE</span>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- ==================== TAB 4: ROAD ENERGY & RANGE ==================== -->
-    <div id="tab-panel-road" class="tab-panel hidden space-y-6">
-      
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Multi-Road Energy Forecaster (2 Cols) -->
-        <div class="lg:col-span-2 glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40">
-          <div class="flex items-center justify-between pb-4 border-b border-slate-800">
-            <div>
-              <h2 class="text-base font-bold text-white tracking-wide">ROAD-SPECIFIC ENERGY & RANGE FORECASTER</h2>
-              <p class="text-xs text-slate-400 mt-0.5">Energy Consumption (Wh/km) Across Diverse Topographies & Rolling Resistances</p>
-            </div>
-            <div id="badge-active-road" class="px-2.5 py-1 text-xs font-bold font-mono bg-amber-950 text-amber-300 border border-amber-800 rounded-lg">
-              MOUNTAIN GRADE (12%)
-            </div>
-          </div>
-
-          <div class="relative h-72 mt-4">
-            <canvas id="roadEnergyChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Road Physics & Real-Time Range Breakdown -->
-        <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Estimated Remaining Range</h3>
-              <i data-lucide="compass" class="w-4 h-4 text-amber-400"></i>
-            </div>
-
-            <div class="mt-4 space-y-2.5 font-mono text-xs">
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Urban Eco Range:</span>
-                <span id="range-urban" class="font-bold text-emerald-400">-- km</span>
-              </div>
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Highway Cruise Range:</span>
-                <span id="range-highway" class="font-bold text-cyan-400">-- km</span>
-              </div>
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Mountain Grade Range:</span>
-                <span id="range-mountain" class="font-bold text-amber-400">-- km</span>
-              </div>
-              <div class="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex justify-between items-center">
-                <span class="text-slate-400">Off-Road Gravel Range:</span>
-                <span id="range-offroad" class="font-bold text-rose-400">-- km</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between items-center">
-            <span>Regen Recovery Efficiency:</span>
-            <span class="font-mono font-bold text-emerald-400">Up to 88%</span>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- Row 3: Scenario Simulator & Serial Telemetry Inspector -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Driving Scenario & Road Condition Controls (2 Cols) -->
-      <div class="lg:col-span-2 glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div>
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Drive Cycle & Road Load Scenario Simulator</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Switch road profiles and observe live predictive thermal and energy adjustments</p>
-          </div>
-          <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
-        </div>
-
-        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          
-          <button onclick="setScenario('MOUNTAIN_CLIMB')" id="btn-scen-MOUNTAIN_CLIMB" class="scen-btn active p-3.5 rounded-2xl border border-cyan-500/50 bg-cyan-950/30 text-left transition-all hover:bg-cyan-900/40">
-            <div class="flex items-center space-x-2">
-              <span class="text-lg">🏔️</span>
-              <div class="font-bold text-xs text-cyan-300">12% Mountain Climb</div>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1">High Continuous Torque, severe winding heat buildup</div>
-          </button>
-
-          <button onclick="setScenario('AGGRESSIVE_TRACK')" id="btn-scen-AGGRESSIVE_TRACK" class="scen-btn p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60 text-left transition-all hover:bg-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="text-lg">⚡</span>
-              <div class="font-bold text-xs text-white">Aggressive Sport Track</div>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1">Rapid Launch, high RPM (7500 RPM), high iron losses</div>
-          </button>
-
-          <button onclick="setScenario('HIGHWAY_CRUISE')" id="btn-scen-HIGHWAY_CRUISE" class="scen-btn p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60 text-left transition-all hover:bg-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="text-lg">🛣️</span>
-              <div class="font-bold text-xs text-white">110 km/h Highway Cruise</div>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1">Steady cruising speed, moderate steady thermal state</div>
-          </button>
-
-          <button onclick="setScenario('ECO_CITY')" id="btn-scen-ECO_CITY" class="scen-btn p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60 text-left transition-all hover:bg-slate-800">
-            <div class="flex items-center space-x-2">
-              <span class="text-lg">🏙️</span>
-              <div class="font-bold text-xs text-white">Urban City Eco</div>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1">Frequent stop-and-go with regen braking recovery</div>
-          </button>
-
-          <button onclick="setScenario('COOLING_DEGRADED')" id="btn-scen-COOLING_DEGRADED" class="scen-btn p-3.5 rounded-2xl border border-rose-900/50 bg-rose-950/20 text-left transition-all hover:bg-rose-900/40">
-            <div class="flex items-center space-x-2">
-              <span class="text-lg">⚠️</span>
-              <div class="font-bold text-xs text-rose-300">Cooling Impairment</div>
-            </div>
-            <div class="text-[10px] text-slate-400 mt-1">Degraded heat dissipation, triggers fast proactive derating</div>
-          </button>
-
-          <!-- Ambient Temp Adjustment -->
-          <div class="p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60 flex flex-col justify-between">
-            <div class="flex justify-between items-center text-xs">
-              <span class="font-bold text-slate-300">Ambient Temp:</span>
-              <span id="slider-amb-val" class="font-mono text-cyan-400 font-bold">30 °C</span>
-            </div>
-            <input type="range" id="slider-amb" min="15" max="50" value="30" oninput="updateAmbient(this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 mt-2">
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ESP32 & Serial Stream Box -->
-      <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/40 flex flex-col justify-between">
+    <!-- SECTION 3: LIVE TEMPERATURE & PREDICTION CHART -->
+    <div class="glass-card p-6 rounded-3xl border border-slate-800 bg-slate-900/60 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
-          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">ESP32 Telemetry & CSV Stream</h3>
-            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
-          </div>
-
-          <div class="mt-3 text-[11px] font-mono text-slate-400 bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 overflow-x-auto">
-            <div class="text-emerald-400 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> [ESP32 LittleFS & USB Serial] 115200 baud
-            </div>
-            <div class="text-slate-500 text-[10px]">FORMAT: timestamp_ms,voltage_v,current_a,speed_rpm,stator_temp_c,power_w</div>
-            <div id="hex-dump" class="text-cyan-300 break-all select-all">
-              12400,71.80,32.40,4100,52.40,30.0,2326.3
-            </div>
-          </div>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="line-chart" class="w-4 h-4 text-cyan-400"></i> Live Temperature Trend & Prediction Curve
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Real-time measured motor temperature (DS18B20) plotted alongside future Random Forest forecasts</p>
         </div>
-
-        <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between items-center">
-          <span>Target Microcontroller:</span>
-          <span class="font-mono font-bold text-cyan-300">ESP32 (Wi-Fi + LittleFS CSV) / TI C2000</span>
+        <div class="flex items-center space-x-4 text-xs font-mono">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+            <span class="text-slate-300">Measured (Now)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
+            <span class="text-slate-300">+1 Min</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+            <span class="text-slate-300">+5 Min</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-purple-400"></span>
+            <span class="text-slate-300">+30 Min</span>
+          </div>
         </div>
       </div>
 
+      <div class="relative h-72 mt-4">
+        <canvas id="liveTempChart"></canvas>
+      </div>
+    </div>
+
+    <!-- SECTION 4: PINOUT & CONNECTION SUMMARY (SIMPLE ACCORDION/FOOTER) -->
+    <div class="glass-card p-5 rounded-2xl border border-slate-800 bg-slate-900/40 text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <span class="font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="git-merge" class="w-4 h-4 text-amber-400"></i> Hardware Connection Summary
+        </span>
+        <span class="text-slate-500 font-mono">12V Continuous Run Loop</span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 font-mono text-[11px]">
+        <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-slate-400">1. Voltage (0-25V)</div>
+          <div class="font-bold text-amber-300 mt-0.5">C2000 ADCINA0 (J3-27)</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-slate-400">2. Current (ACS712 5A)</div>
+          <div class="font-bold text-cyan-300 mt-0.5">C2000 ADCINA1 (J3-28)</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-slate-400">3. Speed (LM393)</div>
+          <div class="font-bold text-purple-300 mt-0.5">C2000 GPIO 0 (J2-13)</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-slate-400">4. Temp (DS18B20)</div>
+          <div class="font-bold text-rose-300 mt-0.5">C2000 GPIO 3 (J1-6)</div>
+        </div>
+      </div>
     </div>
 
   </main>
 
-  <footer class="text-center py-6 text-xs text-slate-500 border-t border-slate-900">
-    48V - 96V EV BLDC Motor Predictive Thermal AI Cockpit & ESP32 CSV Data Pipeline
-  </footer>
-
   <script src="app.js"></script>
-  <script>
-    lucide.createIcons();
-  </script>
 </body>
 </html>

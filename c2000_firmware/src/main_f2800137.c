@@ -341,25 +341,17 @@ void process48VBLDCPredictions(float dt_sec) {
 }
 
 /**
- * @brief Streams 48V BLDC Telemetry over USB Virtual COM to Laptop
+ * @brief Streams 12V DC Motor Telemetry over SCIA (GPIO 29) to ESP32-S Wi-Fi Bridge
  */
 void sendTelemetryStreamToLaptop(void) {
     char tx_buffer[160];
+    // Formats JSON payload directly readable by ESP32-S ArduinoJson parser
     int len = snprintf(tx_buffer, sizeof(tx_buffer),
-                       "$EV_48V,%lu,%.1f,%.1f,%.2f,%.1f,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%u*\r\n",
-                       g_system_tick_ms,
-                       g_telemetry.stator_temp_measured_C,
-                       g_telemetry.est_rotor_magnet_temp_C,
-                       g_telemetry.dc_bus_current_A,
+                       "{\"v\":%.2f,\"i\":%.2f,\"rpm\":%u,\"temp\":%.1f}\r\n",
                        g_telemetry.dc_bus_voltage_V,
-                       g_telemetry.rotor_speed_rpm,
-                       g_telemetry.pred_stator_temp_1m_C,
-                       g_telemetry.pred_stator_temp_5m_C,
-                       g_telemetry.pred_stator_temp_15m_C,
-                       g_telemetry.battery_soc_pct,
-                       g_telemetry.energy_rate_wh_per_km,
-                       g_telemetry.remaining_range_km,
-                       g_telemetry.thermal_derate_active);
+                       g_telemetry.dc_bus_current_A,
+                       (unsigned int)g_telemetry.rotor_speed_rpm,
+                       g_telemetry.stator_temp_measured_C);
 
     for (int i = 0; i < len; i++) {
         while (!SCI_isSpaceAvailableNonFIFO(SCIA_BASE));

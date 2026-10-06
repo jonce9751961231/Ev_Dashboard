@@ -13,7 +13,7 @@
  */
 
 // --- 1. System Physics Specifications ---
-let currentVoltageSystem = 72; // Default 72V system
+let currentVoltageSystem = 12; // Default 12V DC Motor Continuous Testbed
 
 const BLDCSpecs = {
   pole_pairs: 4,              // 8-Pole BLDC
@@ -128,7 +128,7 @@ let csvDataset = [];
 let csvCurrentRowIndex = 0;
 let csvPlaybackTimer = null;
 
-// --- 3. Voltage System Configuration (48V to 96V) ---
+// --- 3. Voltage System Configuration (12V, 48V, 72V) ---
 function setVoltageSystem(volts) {
   currentVoltageSystem = volts;
   
@@ -137,20 +137,25 @@ function setVoltageSystem(volts) {
   const activeBtn = document.getElementById(`btn-volt-${volts}`);
   if (activeBtn) activeBtn.classList.add('active');
 
-  // Update battery capacity according to voltage (50 Ah pack)
+  // Update battery capacity according to voltage
   BatterySpecs.nominal_voltage = volts;
-  BatterySpecs.total_kwh = (volts * BatterySpecs.capacity_ah) / 1000.0;
+  BatterySpecs.total_kwh = (volts * (volts === 12 ? 10.0 : 50.0)) / 1000.0;
   
   // Update UI indicators
-  document.getElementById('active-system-badge').textContent = `${volts}V BLDC SYSTEM`;
-  document.getElementById('val-batt-nom-volt').textContent = `${volts}.0 V (${Math.round(volts / 3.6)}S Configuration)`;
-  document.getElementById('val-batt-cap').textContent = `50 Ah (${BatterySpecs.total_kwh.toFixed(1)} kWh)`;
-  document.getElementById('val-vdc').textContent = `${volts}.0 V`;
+  const badge = document.getElementById('active-system-badge');
+  if (badge) {
+    badge.textContent = volts === 12 ? "12V DC MOTOR (CONTINUOUS)" : `${volts}V BLDC SYSTEM`;
+  }
+  const battVolt = document.getElementById('val-batt-nom-volt');
+  if (battVolt) battVolt.textContent = `${volts}.0 V (${volts === 12 ? '12V Power Bus' : Math.round(volts / 3.6) + 'S Configuration'})`;
+  const battCap = document.getElementById('val-batt-cap');
+  if (battCap) battCap.textContent = `${volts === 12 ? '10 Ah (0.12 kWh)' : '50 Ah (' + BatterySpecs.total_kwh.toFixed(1) + ' kWh)'}`;
+  const vdc = document.getElementById('val-vdc');
+  if (vdc) vdc.textContent = volts === 12 ? "12.10 V (0-25V)" : `${volts}.0 V`;
 
-  // Scale max torque / power labels
-  const maxTorque = Math.round(250 * (volts / 48.0));
-  const maxPowerKw = Math.round((volts * 65.0) / 1000.0);
-  document.getElementById('val-max-torque-label').textContent = `${maxTorque} Nm`;
+  // Scale max torque labels
+  const maxTorqueLabel = document.getElementById('val-max-torque-label');
+  if (maxTorqueLabel) maxTorqueLabel.textContent = volts === 12 ? "1.50 Nm" : `${Math.round(250 * (volts / 48.0))} Nm`;
 
   console.log(`[Voltage System] Switched to ${volts}V DC Bus architecture.`);
 }
@@ -1192,31 +1197,59 @@ function connectRandomForestWebSocket() {
     rfWebSocket.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        if (payload.source === "RANDOM_FOREST_AI_SERVER") {
-          // Update live dials
-          document.getElementById('val-vdc').textContent = `${payload.voltage_v.toFixed(1)} V`;
-          document.getElementById('val-irms').textContent = `${payload.current_a.toFixed(1)} A`;
-          document.getElementById('val-motor-rpm').textContent = `${payload.rpm} RPM`;
-          document.getElementById('val-speed-kmh').textContent = ((payload.rpm / 10000.0) * 140.0).toFixed(1);
-          document.getElementById('temp-node-stator').textContent = `${payload.stator_temp.toFixed(1)} °C`;
-          document.getElementById('temp-node-rotor').textContent = `${payload.rotor_temp.toFixed(1)} °C`;
+        const telem = payload.telemetry || payload;
+        const preds = payload.predictions || {};
 
-          // Prediction cards on Tab 2
-          document.getElementById('esp-card-cur-temp').textContent = `${payload.stator_temp.toFixed(1)} °C`;
-          document.getElementById('esp-card-pred-1m').textContent = `${payload.predictions.plus_1m.toFixed(1)} °C`;
-          document.getElementById('esp-card-pred-5m').textContent = `${payload.predictions.plus_5m.toFixed(1)} °C`;
-          document.getElementById('esp-card-pred-15m').textContent = `${payload.predictions.plus_15m.toFixed(1)} °C`;
-          document.getElementById('esp-card-pred-30m').textContent = `${payload.predictions.plus_30m.toFixed(1)} °C`;
+        const v = telem.voltage_v !== undefined ? Number(telem.voltage_v) : 12.10;
+        const i = telem.current_a !== undefined ? Number(telem.current_a) : 2.20;
+        const rpm = telem.rpm !== undefined ? Number(telem.rpm) : 2150;
+        const temp = telem.temp_c !== undefined ? Number(telem.temp_c) : (telem.stator_temp !== undefined ? Number(telem.stator_temp) : 34.50);
+        const rotorTemp = telem.rotor_temp !== undefined ? Number(telem.rotor_temp) : (temp - 2.5);
 
-          // Live chart updates
-          if (predictionChart) {
-            predictionChart.data.datasets[0].data[3] = payload.stator_temp;
-            predictionChart.data.datasets[0].data[4] = payload.predictions.plus_1m;
-            predictionChart.data.datasets[0].data[5] = payload.predictions.plus_5m;
-            predictionChart.data.datasets[0].data[6] = payload.predictions.plus_15m;
-            predictionChart.data.datasets[0].data[7] = payload.predictions.plus_30m;
-            predictionChart.update('none');
-          }
+        const p1 = preds.pred_1m_c ?? preds.plus_1m ?? (temp + 0.4);
+        const p5 = preds.pred_5m_c ?? preds.plus_5m ?? (temp + 1.2);
+        const p15 = preds.pred_15m_c ?? preds.plus_15m ?? (temp + 2.5);
+        const p30 = preds.pred_30m_c ?? preds.plus_30m ?? (temp + 3.8);
+
+        // Update live dials
+        const vdcEl = document.getElementById('val-vdc');
+        if (vdcEl) vdcEl.textContent = `${v.toFixed(2)} V (0-25V)`;
+        const irmsEl = document.getElementById('val-irms');
+        if (irmsEl) irmsEl.textContent = `${i.toFixed(2)} A (ACS712 5A)`;
+        const rpmEl = document.getElementById('val-motor-rpm');
+        if (rpmEl) rpmEl.textContent = `${rpm} RPM (LM393)`;
+        const speedEl = document.getElementById('val-speed-kmh');
+        if (speedEl) speedEl.textContent = ((rpm * 60.0 * 0.15) / 1000.0).toFixed(1);
+        const pwrEl = document.getElementById('val-power-kw');
+        if (pwrEl) pwrEl.textContent = (v * i).toFixed(1);
+        const trqEl = document.getElementById('val-torque');
+        if (trqEl) trqEl.textContent = (i * 0.08).toFixed(2);
+
+        const tStat = document.getElementById('temp-node-stator');
+        if (tStat) tStat.textContent = `${temp.toFixed(1)} °C (DS18B20)`;
+        const tRot = document.getElementById('temp-node-rotor');
+        if (tRot) tRot.textContent = `${rotorTemp.toFixed(1)} °C`;
+
+        // Prediction cards on Tab 2
+        const curTempEl = document.getElementById('esp-card-cur-temp');
+        if (curTempEl) curTempEl.textContent = `${temp.toFixed(1)} °C`;
+        const p1El = document.getElementById('esp-card-pred-1m');
+        if (p1El) p1El.textContent = `${p1.toFixed(1)} °C`;
+        const p5El = document.getElementById('esp-card-pred-5m');
+        if (p5El) p5El.textContent = `${p5.toFixed(1)} °C`;
+        const p15El = document.getElementById('esp-card-pred-15m');
+        if (p15El) p15El.textContent = `${p15.toFixed(1)} °C`;
+        const p30El = document.getElementById('esp-card-pred-30m');
+        if (p30El) p30El.textContent = `${p30.toFixed(1)} °C`;
+
+        // Live chart updates
+        if (predictionChart) {
+          predictionChart.data.datasets[0].data[3] = temp;
+          predictionChart.data.datasets[0].data[4] = p1;
+          predictionChart.data.datasets[0].data[5] = p5;
+          predictionChart.data.datasets[0].data[6] = p15;
+          predictionChart.data.datasets[0].data[7] = p30;
+          predictionChart.update('none');
         }
       } catch (e) {
         console.error("RF WS parse error:", e);

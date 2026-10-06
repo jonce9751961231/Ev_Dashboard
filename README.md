@@ -1,153 +1,149 @@
-# Aura EV Digital Cockpit & 48V-96V BLDC Multi-Horizon AI Thermal Management System
+# Aura EV Digital Cockpit & 12V DC Motor Continuous Testbed Predictive Thermal Management System
 
-An automotive digital cockpit and real-time predictive thermal management system for Electric Vehicles powered by **48V to 96V BLDC Motors**, featuring **ESP32 CSV Data Logging** and **Physics-Informed Multi-Horizon AI Temperature Forecasting** (+1 min, +5 min, +15 min, +30 min).
+An automotive digital cockpit and real-time predictive thermal management system for an Electric Vehicle / Motor testbed powered by a **12V DC Motor (Continuous Run)**, featuring **TMS320F2800137 LaunchPad Primary Acquisition**, **ESP32-S (38-Pin) Wi-Fi Telemetry Streaming**, and a **100-Tree Random Forest Multi-Horizon AI Thermal Regressor** (+1 min, +5 min, +15 min, +30 min).
 
 **GitHub Repository:** [https://github.com/jonce9751961231/Ev_Dashboard](https://github.com/jonce9751961231/Ev_Dashboard)
 
 ---
 
-## System Architecture
+## 1. System Pipeline Architecture
 
+```text
+ ┌──────────────────────┐
+ │   12V DC MOTOR &     │
+ │    THE 4 SENSORS     │
+ └──────────┬───────────┘
+            │ Physical Sensor Signals (0-2.4V Analog, Pulses, 1-Wire)
+            ▼
+ ┌──────────────────────┐
+ │   TMS320F2800137     │  • Primary Real-Time Sensor Acquisition
+ │      LAUNCHPAD       │  • ADCINA0 (Volt), ADCINA1 (Curr), GPIO 0 (RPM), GPIO 3 (Temp)
+ └──────────┬───────────┘
+            │ High-Speed UART (115200 bps): GPIO 29 (TX) ──► GPIO 16 (RX2)
+            ▼
+ ┌──────────────────────┐
+ │   ESP32-S (38-PIN)   │  • Microcontroller Wi-Fi Telemetry Bridge
+ │      DEV BOARD       │  • Transmits JSON Packets over TCP / WebSocket / HTTP
+ └──────────┬───────────┘
+            │ Wireless Wi-Fi Link (WebSocket ws://localhost:8000/ws/telemetry)
+            ▼
+ ┌──────────────────────┐
+ │   LAPTOP HOST APP    │  • FastAPI + WebSocket Host Server (Port 8000)
+ │   & AI PREDICTOR     │  • 100-Tree Random Forest Multi-Horizon Thermal Forecast
+ └──────────┬───────────┘
+            │ Real-time in-browser rendering (10 Hz)
+            ▼
+ ┌──────────────────────┐
+ │   AUTOMOTIVE WEB     │  • Glassmorphic Instrument Cluster
+ │      COCKPIT         │  • Live Dials: 12V Bus, ACS712 Current, LM393 Speed, DS18B20 Temp
+ └──────────────────────┘
+```
+
+---
+
+## 2. Hardware Bill of Materials (BOM)
+
+| Component / Sensor | Model / Specification | Purpose in System | Connected Pin |
+| :--- | :--- | :--- | :--- |
+| **Actuator** | 12V DC Motor | Constant continuous physical load (No MOSFET switch) | Direct 12V Loop via ACS712 |
+| **Microcontroller 1** | TI TMS320F2800137 LaunchPad | Primary high-speed sensor acquisition & UART stream | LAUNCHXL-F2800137 |
+| **Microcontroller 2** | ESP32-S 38-Pin Dev Board | Wi-Fi Telemetry bridge & JSON streamer to Laptop | NodeMCU ESP32-S |
+| **Voltage Sensor** | Standard 0–25V Sensor Module | Measures 12V DC Link (5:1 divider, 12V $\rightarrow$ 2.4V) | C2000 **ADCINA0** (J3-27) |
+| **Current Sensor** | Allegro ACS712 (5A Variant) | Measures armature current (185 mV/A, 2.5V zero offset) | C2000 **ADCINA1** (J3-28) |
+| **Speed Sensor** | LM393 Optical Sensor Module | Slotted photo-interrupter with 20-slot disc on motor shaft | C2000 **GPIO 0** (J2-13, XINT1) |
+| **Temperature Sensor**| Dallas DS18B20 Waterproof Probe| Surface casing temperature probe (with 4.7kΩ pull-up) | C2000 **GPIO 3** (J1-6) |
+
+---
+
+## 3. Complete Wire-by-Wire Wiring Schematic
+
+### Section A: 12V Motor High-Current Loop (Direct Constant Run)
+* **Wire W-01 (🔴 Thick Red):** 12V Power Supply (+) $\longrightarrow$ ACS712 Screw Terminal 1 (`IP+`)
+* **Wire W-02 (🔴 Thick Red):** ACS712 Screw Terminal 2 (`IP-`) $\longrightarrow$ 12V DC Motor (+) Terminal
+* **Wire W-03 (⚫ Thick Black):** 12V DC Motor (–) Terminal $\longrightarrow$ 12V Power Supply (–) GND
+* **Wire W-04 (🔴 Red):** 12V Power Supply (+) $\longrightarrow$ 0–25V Voltage Sensor `VCC` Screw Terminal
+* **Wire W-05 (⚫ Black):** 12V Power Supply (–) $\longrightarrow$ 0–25V Voltage Sensor `GND` Screw Terminal
+* **Wire W-06 (⚫ Black):** 12V Power Supply (–) $\longrightarrow$ C2000 LaunchPad **GND** (Header J1 Pin 22) *(Mandatory Common Ground)*
+
+### Section B: The 4 Sensors $\longrightarrow$ TMS320F2800137 LaunchPad
+* **Wire W-07 (🟡 Yellow):** Voltage Sensor `S` (Signal) $\longrightarrow$ C2000 **ADCINA0** (Header J3 Pin 27)
+* **Wire W-08 (⚫ Black):** Voltage Sensor `–` (Minus) $\longrightarrow$ C2000 **GND** (Header J1 Pin 22)
+* **Wire W-09 (🔴 Red):** C2000 **5.0V** (Header J1 Pin 21) $\longrightarrow$ ACS712 `VCC`
+* **Wire W-10 (⚫ Black):** ACS712 `GND` $\longrightarrow$ C2000 **GND** (Header J1 Pin 22)
+* **Wire W-11 (🔵 Blue):** ACS712 `OUT` $\longrightarrow$ C2000 **ADCINA1** (Header J3 Pin 28)
+* **Wire W-12 (🔴 Red):** C2000 **3.3V** (Header J1 Pin 1) $\longrightarrow$ LM393 Speed `VCC`
+* **Wire W-13 (⚫ Black):** LM393 Speed `GND` $\longrightarrow$ C2000 **GND** (Header J1 Pin 22)
+* **Wire W-14 (🟠 Orange):** LM393 Speed `D0` $\longrightarrow$ C2000 **GPIO 0** (Header J2 Pin 13, External Interrupt `XINT1`)
+* **Wire W-15 (🔴 Red):** C2000 **3.3V** (Header J1 Pin 1) $\longrightarrow$ DS18B20 `VCC` (Red Wire)
+* **Wire W-16 (⚫ Black):** DS18B20 `GND` (Black Wire) $\longrightarrow$ C2000 **GND** (Header J1 Pin 22)
+* **Wire W-17 (🟡 Yellow):** DS18B20 `DATA` (Yellow Wire) $\longrightarrow$ C2000 **GPIO 3** (Header J1 Pin 6)
+* **Component R-01 (🟤 4.7 kΩ Resistor):** Connected between DS18B20 Yellow (DATA) and Red (3.3V) lines
+
+### Section C: TMS320F2800137 LaunchPad $\longrightarrow$ ESP32-S (38-Pin) UART Link
+* **Wire W-18 (🟢 Green):** C2000 **GPIO 29 (SCIA_TX)** (Header J1 Pin 4) $\longrightarrow$ ESP32-S **GPIO 16 (RX2)**
+* **Wire W-19 (🔵 Blue):** ESP32-S **GPIO 17 (TX2)** $\longrightarrow$ C2000 **GPIO 28 (SCIA_RX)** (Header J1 Pin 3)
+* **Wire W-20 (⚫ Black):** C2000 **GND** (Header J1 Pin 22) $\longrightarrow$ ESP32-S **GND**
+
+---
+
+## 4. Random Forest AI Model Performance
+
+A 100-Tree Multi-Output Random Forest Regressor was trained on the continuous 12V DC motor thermodynamic dataset (12,000 samples) taking into account Joule heating ($I^2 R$), armature dynamics, friction, and casing heat transfer:
+
+| Forecast Horizon | $R^2$ Score (Accuracy) | Mean Absolute Error (MAE) | Root Mean Squared Error (RMSE) |
+| :--- | :--- | :--- | :--- |
+| **+1 Minute** | **99.54%** ($R^2 = 0.9954$) | **0.12 °C** | 0.17 °C |
+| **+5 Minutes** | **98.06%** ($R^2 = 0.9806$) | **0.24 °C** | 0.34 °C |
+| **+15 Minutes**| **98.59%** ($R^2 = 0.9859$) | **0.21 °C** | 0.29 °C |
+| **+30 Minutes**| **98.60%** ($R^2 = 0.9860$) | **0.22 °C** | 0.29 °C |
+
+### Feature Importance (Explainable AI - XAI):
+1. **Measured Temp (`temp_c` / DS18B20)**: **84.9%**
+2. **Ambient Reference (`ambient_temp_c`)**: **10.5%**
+3. **Thermal Rate of Change (`dt_temp_rate`)**: **3.6%**
+4. **DC Bus Voltage (`voltage_v` / 0–25V Sensor)**: **0.7%**
+5. **Motor Speed (`rpm` / LM393)**: **0.1%**
+6. **Joule Loss & Current (`current_a` / ACS712)**: **0.2%**
+
+---
+
+## 5. How to Run the System
+
+### Option A: 1-Click Desktop Launcher
+Double-click **`RUN_HOST_APP.bat`** on your Desktop:
+```text
+C:\Users\ELCOT\OneDrive\Desktop\RUN_HOST_APP.bat
+```
+* Starts the FastAPI backend server on port 8000.
+* Opens the live Cockpit Dashboard in your browser at `http://localhost:8000/`.
+* Connects the real-time WebSocket telemetry stream at `ws://localhost:8000/ws/telemetry`.
+
+### Option B: Terminal Command
+```powershell
+py -3.11 -m core_server.host_app
+```
+
+---
+
+## 6. Repository Structure
 ```
 ev_c2000_dashboard/
+├── c2000_firmware/
+│   ├── src/main_f2800137.c        # C2000 ADC sampling, speed pulse ISR, JSON UART output
+│   └── include/                   # C2000 headers & telemetry structures
 ├── esp32_firmware/
-│   ├── esp32_bldc_csv_logger.ino  # ESP32 48V-96V ADC, DS18B20, LittleFS CSV Logger & Web Server
-│   ├── bldc_ai_weights.h          # Embedded C header with trained AI weights for on-chip ESP32 inference
-│   └── esp32_cloud_logger.ino     # Wi-Fi Cloud HTTP POST uploader
+│   ├── esp32_c2000_wifi_bridge.ino # ESP32 UART2 receiver & Wi-Fi JSON streamer to Laptop
+│   └── esp32_bldc_csv_logger.ino  # CSV LittleFS logger fallback
 ├── core_server/
-│   ├── train_bldc_ai_model.py     # Multi-voltage (48V-96V) BLDC AI model training & weights exporter
-│   ├── esp_csv_ai_predictor.py    # Python CLI tool to ingest ESP CSV files and predict future temperatures
-│   ├── bldc_ai_model_weights.json # Calibrated AI model weights (used by Python and browser JS)
-│   ├── server.py                  # FastAPI & WebSocket telemetry streaming server
-│   └── c2000_interface.py         # Hardware-in-the-Loop virtual driver & binary packet parser
+│   ├── host_app.py                # Unified FastAPI + WebSocket + Live AI Host Server
+│   ├── train_random_forest.py     # 12V DC Motor 100-Tree Random Forest training engine
+│   └── random_forest_model.pkl    # Serialized trained model
 ├── dashboard_ui/
-│   ├── index.html                 # Automotive glassmorphic cluster with 48V-96V selector & ESP CSV AI tab
-│   ├── app.js                     # 10 Hz real-time rendering, in-browser AI predictor & Web Serial driver
-│   └── styles.css                 # Dark-mode automotive cockpit styling & dropzone animations
-├── datasets/
-│   ├── bldc_48v_commute.csv       # 48V BLDC sample city commute ride telemetry
-│   ├── bldc_72v_hill_climb.csv    # 72V BLDC steep 12% grade mountain climb test
-│   └── bldc_96v_high_speed.csv    # 96V BLDC high-speed thermal stress dataset
-└── README.md                      # Complete documentation & wiring guide
+│   ├── index.html                 # Automotive Digital Cockpit with Hardware & Wiring tab
+│   ├── app.js                     # 10 Hz WebSocket rendering & live gauge animations
+│   ├── styles.css                 # Glassmorphic UI styling
+│   └── rf_model_weights.json      # Model metadata & feature importances
+├── RUN_HOST_APP.bat               # 1-Click Desktop launcher
+├── PUSH_TO_GITHUB.bat             # 1-Click GitHub sync helper
+└── README.md                      # System documentation
 ```
-
----
-
-## 1. Hardware Circuit & Wiring Guide (48V - 96V BLDC)
-
-### 1.1 Precision Voltage Divider (Safe for 3.3V ESP32 ADC)
-Measuring **48V to 96V DC** (which peaks up to **115V DC** under full charge or regenerative braking) requires a safe voltage divider with overvoltage clamping:
-
-```
-Battery (+) [48V - 96V] ----[ R1: 270 kΩ (1W) ]----+----[ R2: 8.2 kΩ (0.25W) ]---- Battery (-) / GND
-                                                   |
-                                                   +----[ 3.3V Zener Diode (Cathode) ] to GND (Anode)
-                                                   |     (Prevents voltage spikes above 3.3V)
-                                                   +----[ 100 nF Ceramic Filter Cap ] to GND
-                                                   |
-                                                   +----> ESP32 GPIO 34 (ADC1_CH6)
-```
-- **Division Ratio**:
-  $$\text{Ratio} = \frac{R_2}{R_1 + R_2} = \frac{8.2}{270 + 8.2} = 0.029475 \implies \text{Multiplier} = 33.93$$
-- At **48.0V**: $48.0 \times 0.029475 = 1.41\text{V}$ (Safe)
-- At **72.0V**: $72.0 \times 0.029475 = 2.12\text{V}$ (Safe)
-- At **96.0V**: $96.0 \times 0.029475 = 2.83\text{V}$ (Safe)
-- At **115.0V** Peak: $3.39\text{V} \implies$ **Zener clamps safely at 3.3V** to protect the ESP32.
-
-### 1.2 Sensor Pinout Table
-| Sensor / Function | Sensor Model | ESP32 Pin | Notes |
-| :--- | :--- | :--- | :--- |
-| **Bus Voltage (48V-96V)** | Resistor Divider (270k / 8.2k) | `GPIO 34` (ADC1) | Averaged 16x ADC oversampling |
-| **Motor Current (0-100A)** | Allegro ACS758ECB-100B / ACS770 | `GPIO 35` (ADC1) | 20 mV/A sensitivity, 2.5V zero point |
-| **Stator Winding Temp** | Dallas DS18B20 1-Wire Digital | `GPIO 4` | Requires 4.7 kΩ pull-up to 3.3V |
-| **Motor Speed (RPM)** | BLDC Hall Sensor (Phase A/B) | `GPIO 18` (Interrupt) | Counts rising edge pulses per revolution |
-| **Status LED** | Onboard Blue LED | `GPIO 2` | Pulses during active CSV logging |
-
----
-
-## 2. ESP32 Firmware: CSV Data Logging & Web Server
-
-The firmware [`esp32_firmware/esp32_bldc_csv_logger.ino`](file:///C:/Users/ELCOT/.gemini/antigravity/scratch/ev_c2000_dashboard/esp32_firmware/esp32_bldc_csv_logger.ino) provides:
-1. **Sampling at 5 Hz (200 ms)**: Acquires bus voltage, current, RPM, and stator temperature.
-2. **CSV Conversion**: Automatically formats telemetry rows:
-   ```csv
-   timestamp_ms,voltage_v,current_a,speed_rpm,stator_temp_c,ambient_temp_c,power_w
-   12400,71.80,32.40,4100,52.40,30.0,2326.3
-   ```
-3. **Internal Storage**: Appends to `/telemetry.csv` in ESP32 internal flash memory using `LittleFS`.
-4. **USB Serial Streaming**: Streams CSV lines over Serial (115200 baud) for laptop capture or Web Serial connection.
-5. **Built-in Wi-Fi Web Server**:
-   - ESP32 hosts an Access Point named **`ESP32_EV_TELEMETRY`** (Password: `12345678`).
-   - Open browser on phone or laptop to `http://192.168.4.1/`:
-     - **Live Cockpit Gauges**: Displays live Voltage, Current, Speed, and Temperature.
-     - **One-Click Download**: Click **"Download telemetry.csv"** (`/download_csv`) to save the logged drive file.
-     - **Clear Log**: Click **"Clear CSV"** (`/clear`) to wipe the file for a fresh test run.
-
----
-
-## 3. Physics-Informed AI Future Temperature Prediction
-
-Rather than reacting only after the motor overheats, the AI system predicts future temperatures across **multi-horizons (+1m, +5m, +15m, +30m)**:
-
-$$\begin{aligned}
-P_{\text{cu}} &= 3 I_{\text{rms}}^2 R_0 [1 + \alpha_{\text{cu}} (T_{\text{stator}} - 20^\circ\text{C})] \\
-P_{\text{fe}} &= k_h f_e B^n + k_e f_e^2 B^2 \quad \left(f_e = \frac{p \cdot \text{RPM}}{60}\right) \\
-T_{\infty} &= T_{\text{ambient}} + (P_{\text{cu}} + P_{\text{fe}}) R_{\text{thermal, total}} \\
-T(t + \tau) &= T_{\infty} + (T_{\text{current}} - T_{\infty}) e^{-\frac{\tau}{\tau_{\text{stator}}}} + \beta \frac{dT}{dt}
-\end{aligned}$$
-
-### Safety Limits & Proactive Derating:
-- **Stator Winding Warn**: **110.0°C**
-- **Stator Class F Trip Limit**: **135.0°C**
-- **NdFeB Permanent Magnet Warn**: **90.0°C**
-- **Demagnetization Critical Trip**: **115.0°C**
-- If the predicted temperature at $+5\text{ min}$ exceeds 110°C, maximum allowable current is smoothly scaled back before physical damage occurs.
-
----
-
-## 4. How to Launch & Use the EV Dashboard
-
-### Step 1: Open the Dashboard
-Navigate to:
-```
-C:\Users\ELCOT\.gemini\antigravity\scratch\ev_c2000_dashboard\dashboard_ui\index.html
-```
-Double-click **`index.html`** or open it in any web browser (Google Chrome, Microsoft Edge, Firefox).
-
-### Step 2: Select Your DC Bus Voltage
-In the top header, click your vehicle's nominal voltage:
-- **48V** (13S/14S Li-ion or 16S LFP)
-- **60V** (16S Li-ion / 20S LFP)
-- **72V** (20S Li-ion / 24S LFP)
-- **84V** (23S Li-ion)
-- **96V** (26S Li-ion / 32S LFP)
-
-### Step 3: Run AI Temperature Prediction on ESP CSV Files
-1. Switch to the **"ESP CSV & AI Model"** tab.
-2. Click one of the quick sample buttons:
-   - **`Load 48V Commute CSV`**
-   - **`Load 72V Hill Climb CSV`**
-   - **`Load 96V High Speed CSV`**
-3. Or **drag and drop** your own `telemetry.csv` downloaded from the ESP32!
-4. **Immediate AI Inference**:
-   - The browser automatically executes the AI model on each CSV row.
-   - Plots the historical stator temperature curve followed by the forward **+1m, +5m, +15m, and +30m** prediction trajectory.
-   - Displays thermal safety status, time-to-trip, and proactive throttle derating percentage.
-   - Scrub through the time slider or click **"Play Telemetry"** to replay the recorded ride!
-5. **Connect ESP32 via USB**:
-   - Click **"Connect ESP32 (USB)"** to use the Web Serial API (Chrome/Edge) to read live CSV lines directly from the microcontroller.
-
----
-
-## 5. Running the Python AI Model (Optional)
-
-If you have Python installed:
-1. **Train or re-calibrate the AI model**:
-   ```bash
-   python core_server/train_bldc_ai_model.py
-   ```
-2. **Ingest and predict from any ESP CSV file**:
-   ```bash
-   python core_server/esp_csv_ai_predictor.py datasets/bldc_72v_hill_climb.csv
-   ```
-   This outputs a full terminal forecast summary and exports `core_server/latest_esp_ai_predictions.json`.

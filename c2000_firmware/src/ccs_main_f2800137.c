@@ -4,11 +4,11 @@
  * Target: Texas Instruments LAUNCHXL-F2800137 (TMS320F2800137)
  * IDE: Code Composer Studio (CCS)
  *
- * Pin Connections:
+ * Hardware Pin Connections:
  *   - 0–25V Voltage Sensor : ADCINA0 (Header J3, Pin 27)
  *   - ACS712 5A Current    : ADCINA1 (Header J3, Pin 28)
  *   - LM393 Speed Pulse    : GPIO 0  (Header J2, Pin 13) -> XINT1 Interrupt
- *   - DS18B20 Temp Probe   : GPIO 3  (Header J1, Pin 6)  -> with 4.7k pull-up
+ *   - DS18B20 Temp Data    : GPIO 3  (Header J1, Pin 6)  -> with 4.7k pull-up
  *   - UART TX to ESP32     : GPIO 29 (Header J1, Pin 4)  -> SCIA_TX (115200 bps)
  *   - UART RX from ESP32   : GPIO 28 (Header J1, Pin 3)  -> SCIA_RX
  *   - Common Ground        : GND     (Header J1, Pin 22)
@@ -48,7 +48,7 @@ __interrupt void xint1_isr(void) {
     Interrupt_clearACKGroup(INTERRUPT_ACK_GROUP1);
 }
 
-int main(void) {
+void main(void) {
     // 1. Initialize Device System and Clocks (120 MHz)
     Device_init();
 
@@ -79,7 +79,6 @@ int main(void) {
 // Initialize ADC-A for Voltage (ADCINA0) and Current (ADCINA1)
 void initADC(void) {
     ADC_setPrescaler(ADCA_BASE, ADC_CLK_DIV_2_0);
-    ADC_setMode(ADCA_BASE, ADC_RESOLUTION_12BIT, ADC_MODE_SINGLE_ENDED);
     ADC_enableConverter(ADCA_BASE);
     DEVICE_DELAY_US(1000);
 
@@ -126,22 +125,29 @@ void initSpeedInterrupt(void) {
 
 // Read Analog Sensors and Compute Real-Time Telemetry
 void readSensors(void) {
+    uint16_t adc_volt;
+    uint16_t adc_curr;
+    float v_pin;
+    float calculated_volt;
+    float i_pin;
+    float calculated_curr;
+
     // Trigger ADC Conversions
     ADC_forceSOC(ADCA_BASE, ADC_SOC_NUMBER0);
     ADC_forceSOC(ADCA_BASE, ADC_SOC_NUMBER1);
     while (ADC_isBusy(ADCA_BASE));
 
-    uint16_t adc_volt = ADC_readResult(ADCARESULT_BASE, ADC_SOC_NUMBER0);
-    uint16_t adc_curr = ADC_readResult(ADCARESULT_BASE, ADC_SOC_NUMBER1);
+    adc_volt = ADC_readResult(ADCARESULT_BASE, ADC_SOC_NUMBER0);
+    adc_curr = ADC_readResult(ADCARESULT_BASE, ADC_SOC_NUMBER1);
 
     // 1. Calculate Bus Voltage (0–25V module ratio = 5:1)
-    float v_pin = ((float)adc_volt / ADC_MAX_COUNT) * ADC_VREF;
-    float calculated_volt = v_pin * VOLT_DIVIDER_RATIO;
+    v_pin = ((float)adc_volt / ADC_MAX_COUNT) * ADC_VREF;
+    calculated_volt = v_pin * VOLT_DIVIDER_RATIO;
     g_voltage_v = (calculated_volt > 1.0f) ? calculated_volt : 12.10f;
 
     // 2. Calculate Motor Current (ACS712 5A)
-    float i_pin = ((float)adc_curr / ADC_MAX_COUNT) * ADC_VREF;
-    float calculated_curr = (i_pin - ACS712_ZERO_OFFSET_V) / ACS712_SENSITIVITY;
+    i_pin = ((float)adc_curr / ADC_MAX_COUNT) * ADC_VREF;
+    calculated_curr = (i_pin - ACS712_ZERO_OFFSET_V) / ACS712_SENSITIVITY;
     if (calculated_curr < 0.0f) calculated_curr = 0.0f;
     if (calculated_curr > 5.0f) calculated_curr = 5.0f;
     g_current_a = (calculated_curr > 0.1f) ? calculated_curr : 2.20f;
@@ -151,7 +157,7 @@ void readSensors(void) {
         g_motor_rpm = ((float)g_speed_pulse_count / ENCODER_SLOTS) * (60.0f / 0.200f);
         g_speed_pulse_count = 0;
     } else {
-        g_motor_rpm = 2150.0f; // Default running speed if optical wheel stationary
+        g_motor_rpm = 2150.0f;
     }
 
     // 4. Calculate Motor Temperature (DS18B20 Casing Model)
@@ -161,11 +167,14 @@ void readSensors(void) {
 // Transmit JSON Formatted Packet over UART (SCIA GPIO 29) to ESP32
 void sendUARTStream(void) {
     char buffer[100];
-    int len = snprintf(buffer, sizeof(buffer),
-                       "{\"v\":%.2f,\"i\":%.2f,\"rpm\":%u,\"temp\":%.1f}\r\n",
-                       g_voltage_v, g_current_a, (unsigned int)g_motor_rpm, g_temp_c);
+    int len;
+    int idx;
 
-    for (int idx = 0; idx < len; idx++) {
+    len = snprintf(buffer, sizeof(buffer),
+                   "{\"v\":%.2f,\"i\":%.2f,\"rpm\":%u,\"temp\":%.1f}\r\n",
+                   g_voltage_v, g_current_a, (unsigned int)g_motor_rpm, g_temp_c);
+
+    for (idx = 0; idx < len; idx++) {
         while (!SCI_isSpaceAvailableNonFIFO(SCIA_BASE));
         SCI_writeCharNonBlocking(SCIA_BASE, buffer[idx]);
     }

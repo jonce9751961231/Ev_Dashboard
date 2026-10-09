@@ -118,7 +118,7 @@ function initLiveChart() {
 }
 
 // Update Dashboard UI with latest values
-function updateDashboardUI(v, i, rpm, temp, pwr, p1, p5, p15, p30) {
+function updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30) {
   // 1. Current Temperature
   const tempEl = document.getElementById('val-temp');
   if (tempEl) tempEl.textContent = temp.toFixed(1);
@@ -153,7 +153,11 @@ function updateDashboardUI(v, i, rpm, temp, pwr, p1, p5, p15, p30) {
   const pwrEl = document.getElementById('val-power');
   if (pwrEl) pwrEl.textContent = pwr.toFixed(1);
 
-  // 6. Predicted Temperatures
+  // 6. Motor Torque (Nm)
+  const torqueEl = document.getElementById('val-torque');
+  if (torqueEl) torqueEl.textContent = torque.toFixed(2);
+
+  // 7. Predicted Temperatures
   const p1El = document.getElementById('pred-1m');
   if (p1El) p1El.textContent = p1.toFixed(1);
 
@@ -223,13 +227,14 @@ function connectWebSocket() {
         const rpm = telem.rpm !== undefined ? Number(telem.rpm) : 2100;
         const temp = telem.temp_c !== undefined ? Number(telem.temp_c) : (telem.stator_temp !== undefined ? Number(telem.stator_temp) : 34.5);
         const pwr = telem.power_w !== undefined ? Number(telem.power_w) : (v * i);
+        const torque = telem.torque_nm !== undefined ? Number(telem.torque_nm) : (i * 0.08);
 
         const p1 = preds.pred_1m_c ?? preds.plus_1m ?? (temp + 0.4);
         const p5 = preds.pred_5m_c ?? preds.plus_5m ?? (temp + 1.2);
         const p15 = preds.pred_15m_c ?? preds.plus_15m ?? (temp + 2.5);
         const p30 = preds.pred_30m_c ?? preds.plus_30m ?? (temp + 3.8);
 
-        updateDashboardUI(v, i, rpm, temp, pwr, p1, p5, p15, p30);
+        updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30);
       } catch (err) {
         console.error("Payload error:", err);
       }

@@ -196,6 +196,91 @@ function updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30) {
   }
 }
 
+// Update Future Energy & Road UI
+function updateEnergyUI(energy) {
+  if (!energy) return;
+
+  // 1. Cumulative Energy
+  const totalEl = document.getElementById('val-energy-total');
+  if (totalEl && energy.cumulative_wh !== undefined) {
+    totalEl.textContent = Number(energy.cumulative_wh).toFixed(2);
+  }
+
+  // 2. Consumption Rate
+  const rateEl = document.getElementById('val-energy-rate');
+  if (rateEl && energy.instant_wh_per_km !== undefined) {
+    rateEl.textContent = Number(energy.instant_wh_per_km).toFixed(1);
+  }
+
+  // 3. Remaining Range
+  const rangeEl = document.getElementById('val-remaining-range');
+  if (rangeEl && energy.remaining_range_km !== undefined) {
+    rangeEl.textContent = Number(energy.remaining_range_km).toFixed(1);
+  }
+
+  // 4. Future Energy Horizons
+  const e5El = document.getElementById('pred-energy-5m');
+  if (e5El && energy.pred_energy_5m_wh !== undefined) {
+    e5El.textContent = Number(energy.pred_energy_5m_wh).toFixed(2);
+  }
+
+  const e15El = document.getElementById('pred-energy-15m');
+  if (e15El && energy.pred_energy_15m_wh !== undefined) {
+    e15El.textContent = Number(energy.pred_energy_15m_wh).toFixed(2);
+  }
+
+  const e30El = document.getElementById('pred-energy-30m');
+  if (e30El && energy.pred_energy_30m_wh !== undefined) {
+    e30El.textContent = Number(energy.pred_energy_30m_wh).toFixed(2);
+  }
+
+  // 5. Active Road Badge
+  const roadBadge = document.getElementById('active-road-badge');
+  if (roadBadge && energy.road_name) {
+    roadBadge.textContent = `Road: ${energy.road_name}`;
+  }
+
+  // 6. Road Comparisons Cards
+  const container = document.getElementById('road-cards-container');
+  if (container && energy.road_comparisons) {
+    let html = '';
+    const entries = Object.entries(energy.road_comparisons);
+    for (const [key, item] of entries) {
+      const isCurrent = (key === energy.current_road);
+      const borderClass = isCurrent ? 'border-emerald-500 bg-emerald-950/40 ring-1 ring-emerald-500/50' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700';
+      const badgeText = isCurrent ? '<span class="text-[10px] text-emerald-400 font-bold uppercase ml-1">● Active</span>' : '';
+
+      html += `
+        <div class="p-3 rounded-xl border ${borderClass} cursor-pointer transition-all" onclick="changeRoadProfile('${key}')">
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-300">
+            <span class="truncate">${item.name}</span>
+            ${badgeText}
+          </div>
+          <div class="mt-2 text-slate-400 text-[11px]">
+            <div>Rate: <span class="font-bold text-cyan-300">${item.energy_rate_wh_per_km}</span> Wh/km</div>
+            <div>Range: <span class="font-bold text-amber-300">${item.projected_range_km}</span> km</div>
+            <div>Grade: <span class="text-slate-400">${item.grade_pct}%</span></div>
+          </div>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
+  }
+}
+
+// User changes active road profile
+window.changeRoadProfile = function(roadKey) {
+  const sel = document.getElementById('road-selector');
+  if (sel && sel.value !== roadKey) {
+    sel.value = roadKey;
+  }
+  fetch('/api/road_profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ road_type: roadKey })
+  }).catch(() => {});
+};
+
 // Connect WebSocket to Python Host Server
 function connectWebSocket() {
   const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -221,6 +306,7 @@ function connectWebSocket() {
         const payload = JSON.parse(event.data);
         const telem = payload.telemetry || payload;
         const preds = payload.predictions || {};
+        const energy = payload.energy || null;
 
         const v = telem.voltage_v !== undefined ? Number(telem.voltage_v) : 12.10;
         const i = telem.current_a !== undefined ? Number(telem.current_a) : 2.20;
@@ -235,6 +321,9 @@ function connectWebSocket() {
         const p30 = preds.pred_30m_c ?? preds.plus_30m ?? (temp + 3.8);
 
         updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30);
+        if (energy) {
+          updateEnergyUI(energy);
+        }
       } catch (err) {
         console.error("Payload error:", err);
       }

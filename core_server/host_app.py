@@ -83,6 +83,16 @@ if os.path.exists(WEIGHTS_PATH):
 # 12V DC Motor Physical Specs
 R_ARMATURE = 0.45  # Armature resistance in Ohms
 
+# Import Road Energy & Future Range Predictor
+try:
+    from .road_energy_predictor import RoadEnergyPredictor, RoadProfile
+except ImportError:
+    from road_energy_predictor import RoadEnergyPredictor, RoadProfile
+
+road_energy_predictor = RoadEnergyPredictor()
+g_cumulative_energy_wh = 0.0
+g_last_energy_tick = time.time()
+
 # 12V DC Motor Dynamic Continuous Physics Simulator
 class Live12VMotorSimulator:
     def __init__(self):
@@ -286,6 +296,14 @@ def ingest_telemetry_endpoint(t: TelemetryIngest):
     }
     return {"status": "INGESTED", "data": latest_live_telemetry}
 
+@app.post("/api/road_profile")
+def set_road_profile(req: Dict[str, str]):
+    road_key = req.get("road_type", "URBAN_CITY")
+    if road_key in RoadProfile.ROAD_TYPES:
+        road_energy_predictor.current_road_type = road_key
+        return {"status": "UPDATED", "road_type": road_key}
+    return {"status": "ERROR", "message": "Unknown road profile"}
+
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry(websocket: WebSocket):
     await websocket.accept()
@@ -295,13 +313,29 @@ async def websocket_telemetry(websocket: WebSocket):
     try:
         while True:
             # Check if live hardware telemetry arrived from ESP32, else step simulator
-            global latest_live_telemetry
+            global latest_live_telemetry, g_cumulative_energy_wh, g_last_energy_tick
             if latest_live_telemetry is not None:
                 step_data = latest_live_telemetry.copy()
                 source = "ESP32_WIFI_HARDWARE"
             else:
                 step_data = simulator.step()
                 source = "12V_SIMULATOR_TESTBED"
+
+            now_time = time.time()
+            dt_sec = max(0.2, min(3.0, now_time - g_last_energy_tick))
+            g_last_energy_tick = now_time
+
+            pwr_w = float(step_data["power_w"])
+            g_cumulative_energy_wh += (pwr_w * dt_sec) / 3600.0
+
+            # Multi-Horizon Future Energy Consumption Forecasts
+            pred_e_5m = round(pwr_w * (5.0 / 60.0), 2)
+            pred_e_15m = round(pwr_w * (15.0 / 60.0), 2)
+            pred_e_30m = round(pwr_w * (30.0 / 60.0), 2)
+
+            # Road longitudinal dynamics & remaining range
+            speed_kmh = max(5.0, round((step_data["rpm"] * 60.0 * 0.15) / 1000.0, 1))
+            road_forecast = road_energy_predictor.predict_energy_and_range(speed_kmh, battery_soc=0.85, total_battery_kwh=1.2)
 
             p1, p5, p15, p30 = predict_multi_horizon(
                 step_data["voltage_v"],
@@ -329,7 +363,7 @@ async def websocket_telemetry(websocket: WebSocket):
                     "power_w": step_data["power_w"],
                     "joule_loss_w": step_data["joule_loss_w"],
                     "torque_nm": round(step_data["current_a"] * 0.08, 2),
-                    "speed_kmh": round((step_data["rpm"] * 60.0 * 0.15) / 1000.0, 1),
+                    "speed_kmh": speed_kmh,
                     "dt_temp_rate": step_data["dt_temp_rate"]
                 },
                 "predictions": {
@@ -337,6 +371,18 @@ async def websocket_telemetry(websocket: WebSocket):
                     "pred_5m_c": p5,
                     "pred_15m_c": p15,
                     "pred_30m_c": p30
+                },
+                "energy": {
+                    "cumulative_wh": round(g_cumulative_energy_wh, 2),
+                    "pred_energy_5m_wh": pred_e_5m,
+                    "pred_energy_15m_wh": pred_e_15m,
+                    "pred_energy_30m_wh": pred_e_30m,
+                    "current_road": road_forecast["current_road"],
+                    "road_name": road_forecast["road_name"],
+                    "instant_wh_per_km": road_forecast["instant_wh_per_km"],
+                    "remaining_range_km": road_forecast["remaining_range_km"],
+                    "remaining_battery_kwh": road_forecast["remaining_battery_kwh"],
+                    "road_comparisons": road_forecast["multi_road_forecasts"]
                 },
                 "sensors": {
                     "voltage_sensor": "0-25V Sensor (ADCINA0)",

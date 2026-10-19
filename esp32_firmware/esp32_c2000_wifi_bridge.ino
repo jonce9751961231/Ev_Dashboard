@@ -29,8 +29,8 @@ const char* WIFI_SSID     = "Your_WiFi_Or_Hotspot_SSID";
 const char* WIFI_PASSWORD = "Your_WiFi_Password";
 
 // --- Render website (HTTPS, port 443) ---
-const char* RENDER_HOST = "your-app-name.onrender.com";   // no https://, no trailing slash
-const char* API_KEY     = "PASTE_AURA_API_KEY_FROM_RENDER";
+const char* RENDER_HOST = "thermapulse-ev.onrender.com";   // Live Render website URL
+const char* API_KEY     = ""; // Unset on Render, leave empty
 
 // --- UART2 Pins for C2000 LaunchPad ---
 #define RXD2 16   // Connect to C2000 GPIO 29 (SCIA_TX)

@@ -1,0 +1,97 @@
+{
+  "trained_at": "2026-10-19T09:28:22",
+  "interval_s": 10.0,
+  "horizons_min": [
+    1,
+    5,
+    15,
+    30
+  ],
+  "split": "whole-run split: 8 train / 2 val / 2 test runs (test runs: demo_run01, demo_run08)",
+  "best_model": "gru",
+  "beats_baselines": false,
+  "feature_names": [
+    "voltage_v",
+    "current_a",
+    "rpm",
+    "temp_c",
+    "ambient_temp_c",
+    "power_w",
+    "current_sq",
+    "temp_above_ambient",
+    "dtemp_60s",
+    "i_mean_60s",
+    "rpm_mean_60s",
+    "dtemp_300s",
+    "i_mean_300s",
+    "rpm_mean_300s",
+    "dtemp_600s",
+    "i_mean_600s",
+    "rpm_mean_600s"
+  ],
+  "gru_cols": [
+    "voltage_v",
+    "current_a",
+    "rpm",
+    "temp_c",
+    "ambient_temp_c",
+    "power_w",
+    "temp_above_ambient"
+  ],
+  "lag_s": [
+    60,
+    300,
+    600
+  ],
+  "window_steps": 30,
+  "models": {
+    "persistence": {
+      "file": null,
+      "val_mean_mae": 3.325119091759457,
+      "test_mean_mae": 4.0459533515412955,
+      "test_mean_rmse": 4.657854617864855,
+      "size_kb": 0.0,
+      "infer_ms": 0.000603333349621001
+    },
+    "physics_fit": {
+      "file": "physics_fit.json",
+      "val_mean_mae": 2.8512149281288828,
+      "test_mean_mae": 3.281214018033219,
+      "test_mean_rmse": 3.9946231352360764,
+      "size_kb": 0.115234375,
+      "infer_ms": 0.01717000001614603
+    },
+    "ridge": {
+      "file": "ridge.joblib",
+      "val_mean_mae": 2.46001746750099,
+      "test_mean_mae": 3.0710628665311726,
+      "test_mean_rmse": 3.8212286761661254,
+      "size_kb": 1.9541015625,
+      "infer_ms": 0.3149133333560409
+    },
+    "random_forest": {
+      "file": "random_forest.joblib",
+      "val_mean_mae": 4.017614326732741,
+      "test_mean_mae": 3.9653531616280464,
+      "test_mean_rmse": 4.70874273768792,
+      "size_kb": 4789.51953125,
+      "infer_ms": 42.50581333332472
+    },
+    "lightgbm": {
+      "file": "lightgbm.joblib",
+      "val_mean_mae": 3.078844814699152,
+      "test_mean_mae": 3.582746234408889,
+      "test_mean_rmse": 4.245259257366331,
+      "size_kb": 59.015625,
+      "infer_ms": 7.020583333329947
+    },
+    "gru": {
+      "file": "gru.pt",
+      "val_mean_mae": 2.3892363158058836,
+      "test_mean_mae": 3.352197962856873,
+      "test_mean_rmse": 4.041454499102941,
+      "size_kb": 18.6611328125,
+      "infer_ms": 1.5613466666460833
+    }
+  }
+}

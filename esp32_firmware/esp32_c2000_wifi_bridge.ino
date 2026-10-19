@@ -31,17 +31,20 @@ const int   HOST_PORT      = 8000;
 #define RXD2 16   // Connect to C2000 GPIO 29 (SCIA_TX)
 #define TXD2 17   // Connect to C2000 GPIO 28 (SCIA_RX)
 
-// Telemetry State
+// Telemetry State - Ground Truth (NO FAKE DEFAULTS)
 struct TelemetryData {
   float voltage_v;
   float current_a;
   int   rpm;
   float temp_c;
-  unsigned long timestamp_ms;
+  bool  temp_valid;
+  unsigned long last_packet_time_ms;
+  bool  has_received_packet;
 } g_telem;
 
 unsigned long lastSendTime = 0;
-const unsigned long SEND_INTERVAL_MS = 200; // 5 Hz update to laptop
+const unsigned long SEND_INTERVAL_MS = 1000;   // 1 Hz rate matches host dashboard & ML window
+const unsigned long HARDWARE_TIMEOUT_MS = 3000; // Stop streaming if C2000 quiet for >3s
 
 void setup() {
   Serial.begin(115200);   // USB Serial Monitor debug
@@ -50,14 +53,17 @@ void setup() {
   delay(1000);
   Serial.println("\n========================================================");
   Serial.println("   ESP32-S (38-PIN) C2000 TO LAPTOP WI-FI TELEMETRY BRIDGE");
-  Serial.println("   Target: 12V DC Motor Testbed (Continuous Run)");
+  Serial.println("   Target: 12V DC Motor Testbed (Honest Ground-Truth)");
   Serial.println("========================================================");
 
-  // Initialize Defaults
-  g_telem.voltage_v = 12.10;
-  g_telem.current_a = 2.20;
-  g_telem.rpm = 2100;
-  g_telem.temp_c = 34.50;
+  // Initialize Ground-Truth State: 0/NAN until C2000 actually sends data
+  g_telem.voltage_v = 0.0;
+  g_telem.current_a = 0.0;
+  g_telem.rpm       = 0;
+  g_telem.temp_c    = -127.0;
+  g_telem.temp_valid = false;
+  g_telem.last_packet_time_ms = 0;
+  g_telem.has_received_packet = false;
 
   // Connect to Wi-Fi
   Serial.print("[WiFi] Connecting to: ");
@@ -86,8 +92,7 @@ void loop() {
     String line = Serial2.readStringUntil('\n');
     line.trim();
 
-    if (line.length() > 0) {
-      // Parse JSON from C2000, e.g.: {"v":12.10,"i":2.35,"rpm":2150,"temp":34.8}
+    if (line.length() > 0 && line.startsWith("{")) {
       StaticJsonDocument<256> doc;
       DeserializationError err = deserializeJson(doc, line);
 
@@ -95,11 +100,19 @@ void loop() {
         if (doc.containsKey("v"))    g_telem.voltage_v = doc["v"].as<float>();
         if (doc.containsKey("i"))    g_telem.current_a = doc["i"].as<float>();
         if (doc.containsKey("rpm"))  g_telem.rpm       = doc["rpm"].as<int>();
-        if (doc.containsKey("temp")) g_telem.temp_c   = doc["temp"].as<float>();
-        g_telem.timestamp_ms = millis();
+        if (doc.containsKey("temp") && !doc["temp"].isNull()) {
+          g_telem.temp_c     = doc["temp"].as<float>();
+          g_telem.temp_valid = (g_telem.temp_c > -50.0 && g_telem.temp_c < 125.0);
+        } else {
+          g_telem.temp_c     = -127.0;
+          g_telem.temp_valid = false;
+        }
+        g_telem.last_packet_time_ms = millis();
+        g_telem.has_received_packet = true;
 
-        Serial.printf("[C2000 RX] V: %.2fV | I: %.2fA | RPM: %d | Temp: %.1f C\n",
-                      g_telem.voltage_v, g_telem.current_a, g_telem.rpm, g_telem.temp_c);
+        Serial.printf("[C2000 RX] V: %.2fV | I: %.2fA | RPM: %d | Temp: %s\n",
+                      g_telem.voltage_v, g_telem.current_a, g_telem.rpm,
+                      g_telem.temp_valid ? String(g_telem.temp_c, 1).c_str() : "DISCONN");
       }
     }
   }
@@ -108,8 +121,14 @@ void loop() {
   if (millis() - lastSendTime >= SEND_INTERVAL_MS) {
     lastSendTime = millis();
 
-    if (WiFi.status() == WL_CONNECTED) {
+    // Ground-truth integrity: Do NOT re-send stale data if C2000 goes quiet!
+    bool isHardwareFresh = g_telem.has_received_packet &&
+                           (millis() - g_telem.last_packet_time_ms <= HARDWARE_TIMEOUT_MS);
+
+    if (WiFi.status() == WL_CONNECTED && isHardwareFresh) {
       sendTelemetryToHost();
+    } else if (!isHardwareFresh && g_telem.has_received_packet) {
+      Serial.println("[BRIDGE] C2000 quiet for >3s. Suppressing stale transmission so host detects offline state.");
     }
   }
 }
@@ -121,12 +140,16 @@ void sendTelemetryToHost() {
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
 
-  // Construct JSON body
+  // Construct JSON body (Preserve null on temperature if disconnected)
   StaticJsonDocument<256> doc;
   doc["voltage_v"] = g_telem.voltage_v;
   doc["current_a"] = g_telem.current_a;
   doc["rpm"]       = g_telem.rpm;
-  doc["temp_c"]    = g_telem.temp_c;
+  if (g_telem.temp_valid) {
+    doc["temp_c"]  = g_telem.temp_c;
+  } else {
+    doc["temp_c"]  = nullptr;
+  }
 
   String requestBody;
   serializeJson(doc, requestBody);
@@ -135,7 +158,7 @@ void sendTelemetryToHost() {
   if (httpResponseCode > 0) {
     // Successfully sent to Laptop
   } else {
-    // In case server is starting
+    // Server unreachable
   }
   http.end();
 }

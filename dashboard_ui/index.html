@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aura EV | 12V DC Motor Real-Time AI Thermal Dashboard</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Lucide Icons CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <title>ThermaPulse EV | Real-Time Edge Telemetry & Multi-Horizon AI Thermal Cockpit</title>
+  <!-- Tailwind CSS CDN (Pinned) -->
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <!-- Chart.js CDN (Pinned) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <!-- Lucide Icons CDN (Pinned) -->
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-black">
@@ -25,19 +25,33 @@
         </div>
         <div>
           <div class="flex items-center space-x-2">
-            <h1 class="text-lg font-bold tracking-wide text-white">AURA EV COCKPIT</h1>
+            <h1 class="text-lg font-bold tracking-wide text-white">THERMAPULSE EV</h1>
             <span class="px-2 py-0.5 text-xs font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800 rounded-full">12V DC MOTOR</span>
             <span id="conn-badge" class="px-2 py-0.5 text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               LIVE STREAM (1 Hz)
             </span>
+            <span id="source-badge" class="px-2 py-0.5 text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 rounded-full flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+              SOURCE: DETECTING...
+            </span>
+            <span id="model-badge" class="px-2 py-0.5 text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800 rounded-full flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+              MODEL: LOADING...
+            </span>
           </div>
-          <p class="text-xs text-slate-400 mt-0.5">Sensors: DS18B20 • ACS712 5A • 0–25V Module • LM393 Speed ➔ TMS320F2800137 ➔ ESP32-S Wi-Fi ➔ Random Forest AI</p>
+          <p class="text-xs text-slate-400 mt-0.5">Pipeline: DS18B20 + ACS712 + 0-25V + LM393 -&gt; TMS320F2800137 -&gt; ESP32-S Wi-Fi -&gt; ML Forecaster</p>
         </div>
       </div>
 
       <!-- Header Actions -->
       <div class="flex items-center space-x-3 text-xs">
+        <!-- 1-Click Run Recorder Button -->
+        <button id="btn-record-run" onclick="toggleRunRecording()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-bold transition-all text-xs shadow-sm">
+          <span id="record-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+          <span id="record-text">REC RUN</span>
+        </button>
+
         <div class="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/80 font-mono text-slate-300 flex items-center gap-2">
           <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
           <span>Time:</span>
@@ -55,13 +69,36 @@
   <!-- Main Container -->
   <main class="max-w-7xl mx-auto p-6 space-y-6">
 
+    <!-- PHASE 3: PROACTIVE THERMAL SAFETY & FALLBACK ALERT BANNER -->
+    <div id="thermal-alert-banner" class="hidden transition-all duration-300 rounded-2xl p-4 border flex flex-wrap items-center justify-between gap-4 shadow-lg">
+      <div class="flex items-center gap-3">
+        <div id="thermal-alert-icon" class="p-2.5 rounded-xl">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="thermal-alert-level" class="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md">NORMAL</span>
+            <span id="thermal-alert-ttt" class="text-xs font-mono font-bold text-slate-300"></span>
+          </div>
+          <p id="thermal-alert-msg" class="text-xs mt-1 text-slate-200 font-medium"></p>
+        </div>
+      </div>
+      <div id="fallback-alert-pill" class="hidden px-3 py-1.5 rounded-xl border text-xs font-bold font-mono flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-amber-400"></i>
+        <span id="fallback-alert-text"></span>
+      </div>
+    </div>
+
     <!-- SECTION 1: LIVE SENSOR READINGS (5 CORE CARDS) -->
     <div>
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-xs uppercase font-bold text-slate-400 tracking-wider flex items-center gap-2">
           <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i> Real-Time Sensor Telemetry
         </h2>
-        <span class="text-xs font-mono text-slate-500">Continuous Acquisition</span>
+        <div class="flex items-center gap-3">
+          <span id="ambient-indicator" class="text-xs font-mono text-slate-400 bg-slate-900 px-2.5 py-0.5 rounded-full border border-slate-800">Ambient: 28.0°C (Nominal)</span>
+          <span class="text-xs font-mono text-slate-500">Continuous Acquisition</span>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -169,34 +206,66 @@
             <span class="text-lg font-bold text-slate-400">Nm</span>
           </div>
           <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
-            <span>Motor Torque</span>
-            <span class="text-slate-300">Kt · I</span>
+            <span>Torque (Kt · I)</span>
+            <span class="text-amber-300 font-medium">Kt = 0.08 Nm/A</span>
           </div>
         </div>
 
       </div>
     </div>
 
-    <!-- SECTION 2: RANDOM FOREST PREDICTED TEMPERATURE -->
-    <div class="glass-card p-6 rounded-3xl border border-purple-900/60 bg-gradient-to-br from-slate-900/90 via-purple-950/20 to-slate-900/90 shadow-xl">
-      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-purple-800/40">
+    <!-- SECTION 2: MULTI-MODEL PREDICTIVE THERMAL MANAGEMENT -->
+    <div class="glass-card p-6 rounded-3xl border border-cyan-900/60 bg-gradient-to-br from-slate-900/90 via-cyan-950/20 to-slate-900/90 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-cyan-800/40">
         <div>
           <div class="flex items-center space-x-2">
-            <span class="px-2.5 py-1 text-xs font-bold bg-purple-950 text-purple-300 border border-purple-700 rounded-lg flex items-center gap-1.5 shadow-sm">
-              <span>🌲</span> RANDOM FOREST PREDICTOR (100 TREES)
+            <span class="px-2.5 py-1 text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 rounded-lg flex items-center gap-1.5 shadow-sm">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i> AI MODEL REGISTRY & FORECASTER
             </span>
-            <span class="px-2.5 py-1 text-xs font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-lg">
-              Accuracy: R² = 99.54%
+            <span id="active-model-title" class="px-2.5 py-1 text-xs font-mono font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-lg">
+              Active: RIDGE REGRESSION
             </span>
           </div>
-          <h3 class="text-base font-bold text-white mt-1.5 tracking-wide">Multi-Horizon Future Temperature Forecasts</h3>
-          <p class="text-xs text-slate-400">Predicts future thermal rise on the 12V DC motor casing across multiple horizons using real-time sensor features.</p>
+          <h3 class="text-base font-bold text-white mt-1.5 tracking-wide">Multi-Horizon Future Temperature Predictions</h3>
+          <p class="text-xs text-slate-400">Click any model button below to instantly toggle the active forecasting model and compare prediction curves:</p>
         </div>
 
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-mono text-cyan-300 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl">
-            Model Latency: &lt; 1.8 ms
-          </span>
+        <!-- Model Toggle Buttons Group -->
+        <div class="flex items-center flex-wrap gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 shadow-inner" id="model-toggle-group">
+          <button onclick="switchActiveModel('gru')" id="btn-model-gru" class="model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-cyan-900/80 text-cyan-200 border border-cyan-500 shadow-md shadow-cyan-500/20">
+            🧠 GRU (Sequence)
+          </button>
+          <button onclick="switchActiveModel('ridge')" id="btn-model-ridge" class="model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-600">
+            ⚡ Ridge
+          </button>
+          <button onclick="switchActiveModel('physics_fit')" id="btn-model-physics_fit" class="model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-600">
+            📐 Physics ODE
+          </button>
+          <button onclick="switchActiveModel('lightgbm')" id="btn-model-lightgbm" class="model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-600">
+            🌳 LightGBM
+          </button>
+          <button onclick="switchActiveModel('random_forest')" id="btn-model-random_forest" class="model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-600">
+            🌲 Random Forest
+          </button>
+          <button onclick="switchActiveModel('persistence')" id="btn-model-persistence" class="model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-600">
+            ⏸️ Persistence
+          </button>
+        </div>
+      </div>
+
+      <!-- Model Specs Live Ribbon -->
+      <div id="model-benchmark-specs" class="mt-3 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 font-mono text-xs flex items-center justify-between flex-wrap gap-2 text-slate-300">
+        <div class="flex items-center gap-3">
+          <span>Test MAE: <strong id="spec-mae" class="text-emerald-400 font-bold">3.35 °C</strong></span>
+          <span>•</span>
+          <span>Test RMSE: <strong id="spec-rmse" class="text-cyan-400 font-bold">4.04 °C</strong></span>
+          <span>•</span>
+          <span>Size: <strong id="spec-size" class="text-amber-300 font-bold">19 KB</strong></span>
+          <span>•</span>
+          <span>Latency: <strong id="spec-latency" class="text-purple-300 font-bold">1.56 ms</strong></span>
+        </div>
+        <div id="spec-skill" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+          Validation Best: GRU (2.39 °C MAE)
         </div>
       </div>
 
@@ -213,7 +282,7 @@
             <span id="pred-1m" class="text-3xl font-black text-white font-mono">--.-</span>
             <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
-          <div class="mt-2 text-[10px] text-slate-500 font-mono">Short-term transient (R²=99.5%)</div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Transient rate (ΔT forecast)</div>
         </div>
 
         <!-- +5 Min -->
@@ -226,7 +295,7 @@
             <span id="pred-5m" class="text-3xl font-black text-amber-300 font-mono">--.-</span>
             <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
-          <div class="mt-2 text-[10px] text-slate-500 font-mono">Continuous run check (R²=98.1%)</div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Safety threshold horizon</div>
         </div>
 
         <!-- +15 Min -->
@@ -239,7 +308,7 @@
             <span id="pred-15m" class="text-3xl font-black text-blue-300 font-mono">--.-</span>
             <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
-          <div class="mt-2 text-[10px] text-slate-500 font-mono">Medium-term soak (R²=98.6%)</div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Medium-term soak projection</div>
         </div>
 
         <!-- +30 Min -->
@@ -252,7 +321,7 @@
             <span id="pred-30m" class="text-3xl font-black text-purple-300 font-mono">--.-</span>
             <span class="text-sm font-semibold text-slate-400">°C</span>
           </div>
-          <div class="mt-2 text-[10px] text-slate-500 font-mono">Thermal equilibrium (R²=98.6%)</div>
+          <div class="mt-2 text-[10px] text-slate-500 font-mono">Thermal equilibrium asymptote</div>
         </div>
 
       </div>
@@ -325,7 +394,10 @@
             <span id="val-remaining-range" class="text-3xl font-black text-amber-300 font-mono">--.-</span>
             <span class="text-sm font-semibold text-slate-400">km</span>
           </div>
-          <div class="mt-1 text-[11px] text-slate-500 font-mono">Based on 1.2 kWh Pack (85% SoC)</div>
+          <div class="mt-1 text-[11px] text-slate-500 font-mono flex items-center justify-between flex-wrap gap-1">
+            <span>Pack: 1.2 kWh</span>
+            <span class="px-1.5 py-0.5 text-[9px] font-semibold bg-slate-900 text-amber-300 rounded border border-slate-700">Nominal 85% SoC</span>
+          </div>
         </div>
 
       </div>

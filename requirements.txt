@@ -1,8 +1,12 @@
-fastapi>=0.100.0
-uvicorn>=0.22.0
-websockets>=11.0.3
-pyserial>=3.5
-numpy>=1.24.0
-scipy>=1.10.0
-scikit-learn>=1.2.0
-pytest>=7.3.0
+# Core Runtime Dependencies for ThermaPulse EV Host Server & ML Models
+# Pinned to exact training environment versions to ensure joblib/pickle compatibility
+fastapi==0.142.2
+uvicorn==0.54.0
+websockets==16.0
+numpy==2.4.6
+pandas==3.0.6
+scipy==1.17.1
+scikit-learn==1.9.1
+joblib==1.6.0
+torch==2.14.1
+lightgbm==4.7.0

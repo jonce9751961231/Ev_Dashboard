@@ -1,16 +1,13 @@
 @echo off
-title EV Dashboard - 48V-96V BLDC Motor Predictive AI & ESP CSV System
+title Aura EV Cockpit - 12V DC Motor Real-Time Predictive Host App
 echo ===============================================================================
-echo     AURA EV DASHBOARD - 48V-96V BLDC MOTOR PREDICTIVE AI & ESP CSV SYSTEM
+echo       AURA EV COCKPIT - 12V DC MOTOR PREDICTIVE AI SYSTEM (PORT 8000)
 echo ===============================================================================
 echo.
-echo [1/2] Opening Interactive EV Digital Cockpit in default browser...
-start "" "%~dp0dashboard_ui\index.html"
+echo [1/2] Launching Python Host Server on http://localhost:8000 ...
+echo [2/2] Opening Web Cockpit in your default browser...
+start http://localhost:8000/
 echo.
-echo [2/2] Attempting to launch Python Telemetry Server (Port 8000 if Python installed)...
-py -m core_server.server || python -m core_server.server
-echo.
-echo Note: If Python is not installed, the EV Dashboard works 100%% client-side in the browser!
-echo You can upload ESP CSV files and run AI temperature predictions directly.
-echo.
+cd /d "%~dp0"
+py -3.11 -m core_server.host_app || python -m core_server.host_app
 pause

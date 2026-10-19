@@ -1,0 +1,13 @@
+# Extra packages for the four-model comparison (core_server/ml).
+# Install on top of requirements.txt:
+#     pip install -r requirements.txt -r requirements-ml.txt
+#
+# Any of these can be left out: train_all.py skips a model whose package is
+# missing and trains the rest.
+
+lightgbm>=4.0.0
+
+# PyTorch (needed only for the GRU). The default download is large. For a
+# smaller CPU-only build on Windows, use:
+#     pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.1.0

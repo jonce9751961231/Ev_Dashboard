@@ -208,11 +208,11 @@ window.switchActiveModel = function(modelKey) {
 
   // 1. Update button styling
   document.querySelectorAll('.model-toggle-btn').forEach(btn => {
-    btn.className = "model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-600";
+    btn.className = "model-toggle-btn px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 hover:border-slate-600 flex items-center justify-center text-center";
   });
   const activeBtn = document.getElementById(`btn-model-${modelKey}`);
   if (activeBtn) {
-    activeBtn.className = "model-toggle-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-cyan-900/80 text-cyan-200 border border-cyan-500 shadow-md shadow-cyan-500/20";
+    activeBtn.className = "model-toggle-btn px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold transition-all bg-cyan-900/80 text-cyan-200 border border-cyan-500 shadow-md shadow-cyan-500/20 flex items-center justify-center text-center";
   }
 
   // 2. Update Model Specs Ribbon
@@ -537,12 +537,12 @@ function updateEnergyUI(energy) {
       const badgeText = isCurrent ? '<span class="text-[10px] text-emerald-400 font-bold uppercase ml-1">● Active</span>' : '';
 
       html += `
-        <div class="p-3 rounded-xl border ${borderClass} cursor-pointer transition-all" onclick="changeRoadProfile('${key}')">
-          <div class="flex items-center justify-between text-[11px] font-bold text-slate-300">
+        <div class="p-2.5 sm:p-3 rounded-xl border ${borderClass} cursor-pointer transition-all" onclick="changeRoadProfile('${key}')">
+          <div class="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-300">
             <span class="truncate">${item.name}</span>
             ${badgeText}
           </div>
-          <div class="mt-2 text-slate-400 text-[11px]">
+          <div class="mt-1.5 sm:mt-2 text-slate-400 text-[10px] sm:text-[11px] space-y-0.5">
             <div>Rate: <span class="font-bold text-cyan-300">${item.energy_rate_wh_per_km}</span> Wh/km</div>
             <div>Range: <span class="font-bold text-amber-300">${item.projected_range_km}</span> km</div>
             <div>Grade: <span class="text-slate-400">${item.grade_pct}%</span></div>
@@ -590,44 +590,44 @@ function updateThermalSafetyUI(thermalSafety, preds) {
   banner.classList.remove('hidden');
 
   if (level === 'CRITICAL') {
-    banner.className = "transition-all duration-300 rounded-2xl p-4 border border-rose-500 bg-rose-950/70 text-rose-200 flex flex-wrap items-center justify-between gap-4 shadow-lg shadow-rose-950/50 animate-pulse";
+    banner.className = "transition-all duration-300 rounded-2xl p-3 sm:p-4 border border-rose-500 bg-rose-950/70 text-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-lg shadow-rose-950/50 animate-pulse";
     if (levelEl) {
       levelEl.textContent = "CRITICAL OVERHEAT ALERT";
       levelEl.className = "text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-600 text-white";
     }
     if (iconDiv) {
-      iconDiv.className = "p-2.5 rounded-xl bg-rose-500/20 text-rose-300";
+      iconDiv.className = "p-2 sm:p-2.5 rounded-xl bg-rose-500/20 text-rose-300 shrink-0";
       iconDiv.innerHTML = '<i data-lucide="flame" class="w-5 h-5"></i>';
     }
   } else if (level === 'ELEVATED') {
-    banner.className = "transition-all duration-300 rounded-2xl p-4 border border-amber-500/80 bg-amber-950/60 text-amber-200 flex flex-wrap items-center justify-between gap-4 shadow-lg shadow-amber-950/40";
+    banner.className = "transition-all duration-300 rounded-2xl p-3 sm:p-4 border border-amber-500/80 bg-amber-950/60 text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-lg shadow-amber-950/40";
     if (levelEl) {
       levelEl.textContent = "ELEVATED THERMAL LOAD";
       levelEl.className = "text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-bold";
     }
     if (iconDiv) {
-      iconDiv.className = "p-2.5 rounded-xl bg-amber-500/20 text-amber-300";
+      iconDiv.className = "p-2 sm:p-2.5 rounded-xl bg-amber-500/20 text-amber-300 shrink-0";
       iconDiv.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
     }
   } else if (level === 'SENSOR_OFFLINE') {
-    banner.className = "transition-all duration-300 rounded-2xl p-4 border border-rose-800 bg-slate-900 text-rose-300 flex flex-wrap items-center justify-between gap-4 shadow-lg";
+    banner.className = "transition-all duration-300 rounded-2xl p-3 sm:p-4 border border-rose-800 bg-slate-900 text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-lg";
     if (levelEl) {
       levelEl.textContent = "SENSOR DISCONNECTED";
       levelEl.className = "text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-900 text-rose-200";
     }
     if (iconDiv) {
-      iconDiv.className = "p-2.5 rounded-xl bg-rose-900/30 text-rose-400";
+      iconDiv.className = "p-2 sm:p-2.5 rounded-xl bg-rose-900/30 text-rose-400 shrink-0";
       iconDiv.innerHTML = '<i data-lucide="alert-octagon" class="w-5 h-5"></i>';
     }
   } else {
     // NORMAL
-    banner.className = "transition-all duration-300 rounded-2xl p-3.5 border border-slate-800/80 bg-slate-900/60 text-slate-300 flex flex-wrap items-center justify-between gap-4 shadow-sm";
+    banner.className = "transition-all duration-300 rounded-2xl p-3 sm:p-3.5 border border-slate-800/80 bg-slate-900/60 text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-sm";
     if (levelEl) {
       levelEl.textContent = "THERMAL STATUS: NORMAL";
       levelEl.className = "text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800";
     }
     if (iconDiv) {
-      iconDiv.className = "p-2 rounded-xl bg-emerald-950 text-emerald-400";
+      iconDiv.className = "p-2 rounded-xl bg-emerald-950 text-emerald-400 shrink-0";
       iconDiv.innerHTML = '<i data-lucide="shield-check" class="w-5 h-5"></i>';
     }
   }

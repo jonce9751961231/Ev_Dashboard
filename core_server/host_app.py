@@ -49,6 +49,11 @@ if sys.stdout.encoding != 'utf-8':
 # If unset (development mode), write endpoints allow local network requests.
 AURA_API_KEY = os.getenv("AURA_API_KEY", "").strip()
 
+# Cloud Demo Mode: Set DEMO_MODE=1 or AURA_DEMO=1 on public container hosts
+DEMO_MODE = os.getenv("DEMO_MODE", os.getenv("AURA_DEMO", "0")).lower() in ("1", "true", "yes", "demo")
+if DEMO_MODE:
+    print("[HOST APP] Running in CLOUD DEMO SIMULATOR MODE (labeled as demo)")
+
 def verify_write_access(request: Request):
     if not AURA_API_KEY:
         return True
@@ -262,7 +267,15 @@ try:
         from .ml.predictor import ThermalPredictor
     except ImportError:
         from ml.predictor import ThermalPredictor
-    ml_predictor = ThermalPredictor()
+    try:
+        ml_predictor = ThermalPredictor()
+    except FileNotFoundError:
+        raise
+    except Exception as first_err:
+        # The registry's best model may need a package that is not installed
+        # (e.g. 'gru' needs torch, which is left out of small cloud deployments).
+        print(f"[HOST APP] Best model unavailable ({first_err!r}); falling back to ridge.")
+        ml_predictor = ThermalPredictor(model_name="ridge")
     print(f"[HOST APP] ML forecaster loaded: {ml_predictor.model_name}")
 except FileNotFoundError:
     print("[HOST APP] No trained ML models yet (run core_server.ml.train_all); using RF/physics fallback.")
@@ -443,6 +456,7 @@ def get_health():
             "rotor_offset_c": -2.5,
             "torque_constant_kt": 0.08
         },
+        "demo_mode": DEMO_MODE,
         "active_clients": len(connected_websockets),
         "timestamp": datetime.now().isoformat()
     }
@@ -624,13 +638,17 @@ def compute_canonical_telemetry_tick() -> Dict[str, Any]:
     # Live hardware only counts while fresh samples keep arriving (within 5 seconds).
     hardware_live = (latest_live_telemetry is not None
                      and time.time() - latest_live_at <= HARDWARE_STALE_AFTER_S)
-    if hardware_live:
+    if hardware_live and not DEMO_MODE:
         step_data = latest_live_telemetry.copy()
         source = "ESP32_WIFI_HARDWARE"
     else:
         step_data = simulator.step()
-        source = ("SIMULATOR_HARDWARE_OFFLINE" if latest_live_telemetry is not None
-                  else "12V_SIMULATOR_TESTBED")
+        if DEMO_MODE:
+            source = "DEMO_SIMULATOR_CLOUD"
+        elif latest_live_telemetry is not None:
+            source = "SIMULATOR_HARDWARE_OFFLINE"
+        else:
+            source = "12V_SIMULATOR_TESTBED"
 
     if ml_predictor is not None:
         with ml_lock:
@@ -767,6 +785,7 @@ def compute_canonical_telemetry_tick() -> Dict[str, Any]:
     payload = {
         "timestamp": datetime.now().strftime("%H:%M:%S"),
         "source": source,
+        "demo_mode": DEMO_MODE,
         "system": "12V DC Motor Testbed",
         "mcu_pipeline": "TMS320F2800137 -> ESP32-S Wi-Fi -> Host App",
         "telemetry": {
@@ -904,15 +923,25 @@ if os.path.exists(UI_DIR):
     def serve_js():
         return FileResponse(os.path.join(UI_DIR, "app.js"))
 
+    @app.get("/config.js")
+    def serve_config():
+        config_path = os.path.join(UI_DIR, "config.js")
+        if os.path.exists(config_path):
+            return FileResponse(config_path)
+        return JSONResponse({"error": "not found"}, status_code=404)
+
     @app.get("/rf_model_weights.json")
     def serve_weights():
         return FileResponse(os.path.join(UI_DIR, "rf_model_weights.json"))
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))
     print("=" * 70)
-    print("  LAUNCHING AURA EV 12V DC MOTOR COCKPIT HOST SERVER (PORT 8000)")
-    print("  Web Dashboard: http://localhost:8000/")
-    print("  WebSocket    : ws://localhost:8000/ws/telemetry")
-    print("  Health Status: http://localhost:8000/api/health")
+    print(f"  LAUNCHING THERMAPULSE EV COCKPIT HOST SERVER (PORT {port})")
+    print(f"  Web Dashboard: http://localhost:{port}/")
+    print(f"  WebSocket    : ws://localhost:{port}/ws/telemetry")
+    print(f"  Health Status: http://localhost:{port}/api/health")
+    if DEMO_MODE:
+        print("  MODE         : CLOUD DEMO SIMULATOR (Public)")
     print("=" * 70)
-    uvicorn.run("core_server.host_app:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("core_server.host_app:app", host="0.0.0.0", port=port, reload=False)

@@ -3,19 +3,24 @@
  * Project: 12V DC Motor Continuous Testbed & Telemetry Bridge
  * Target: ESP32-S (38-Pin Development Board)
  * File: esp32_c2000_wifi_bridge.ino
- * Description: 
+ * Description:
  *   1. Receives real-time telemetry from TMS320F2800137 LaunchPad via UART2:
  *      - RX2: GPIO 16 (connected to C2000 GPIO 29 / SCIA_TX)
  *      - TX2: GPIO 17 (connected to C2000 GPIO 28 / SCIA_RX)
  *      - GND: Common GND (connected to C2000 GND)
- *   2. Connects to Wi-Fi Access Point / Laptop Hotspot.
- *   3. Transmits telemetry JSON to Laptop Host Server for Random Forest AI:
- *      - REST: POST http://<LAPTOP_IP>:8000/api/ingest
- *      - WebSocket: ws://<LAPTOP_IP>:8000/ws/telemetry
+ *   2. Connects to your Wi-Fi network (needs internet access).
+ *   3. Posts the telemetry JSON once per second over HTTPS to the public
+ *      Render website:   POST https://<RENDER_HOST>/api/ingest
+ *      Everyone who opens the website then sees the live readings.
+ *
+ * SETUP: fill in WIFI_SSID, WIFI_PASSWORD, RENDER_HOST and API_KEY below.
+ *   RENDER_HOST = your Render address WITHOUT "https://", e.g. thermapulse-ev.onrender.com
+ *   API_KEY     = the AURA_API_KEY value shown in Render > Environment
  * ============================================================================
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
@@ -23,9 +28,9 @@
 const char* WIFI_SSID     = "Your_WiFi_Or_Hotspot_SSID";
 const char* WIFI_PASSWORD = "Your_WiFi_Password";
 
-// --- Laptop Host Server IP (Port 8000) ---
-const char* HOST_SERVER_IP = "192.168.1.100";  // Replace with Laptop's IPv4 address
-const int   HOST_PORT      = 8000;
+// --- Render website (HTTPS, port 443) ---
+const char* RENDER_HOST = "your-app-name.onrender.com";   // no https://, no trailing slash
+const char* API_KEY     = "PASTE_AURA_API_KEY_FROM_RENDER";
 
 // --- UART2 Pins for C2000 LaunchPad ---
 #define RXD2 16   // Connect to C2000 GPIO 29 (SCIA_TX)
@@ -42,6 +47,12 @@ struct TelemetryData {
   bool  has_received_packet;
 } g_telem;
 
+// One TLS connection is kept open and reused, because a new HTTPS handshake
+// every second is slow and uses a lot of ESP32 memory.
+WiFiClientSecure g_secureClient;
+HTTPClient       g_http;
+String           g_ingestUrl;
+
 unsigned long lastSendTime = 0;
 const unsigned long SEND_INTERVAL_MS = 1000;   // 1 Hz rate matches host dashboard & ML window
 const unsigned long HARDWARE_TIMEOUT_MS = 3000; // Stop streaming if C2000 quiet for >3s
@@ -52,7 +63,7 @@ void setup() {
 
   delay(1000);
   Serial.println("\n========================================================");
-  Serial.println("   ESP32-S (38-PIN) C2000 TO LAPTOP WI-FI TELEMETRY BRIDGE");
+  Serial.println("   ESP32-S (38-PIN) C2000 TO RENDER WEBSITE TELEMETRY BRIDGE");
   Serial.println("   Target: 12V DC Motor Testbed (Honest Ground-Truth)");
   Serial.println("========================================================");
 
@@ -64,6 +75,14 @@ void setup() {
   g_telem.temp_valid = false;
   g_telem.last_packet_time_ms = 0;
   g_telem.has_received_packet = false;
+
+  // HTTPS client setup.
+  // setInsecure() encrypts the traffic but does not verify the server certificate.
+  // That is fine for this project; for stricter security pin Render's root CA instead.
+  g_secureClient.setInsecure();
+  g_http.setReuse(true);          // keep the TLS connection open between posts
+  g_http.setTimeout(8000);        // Render's free tier can take a while to wake up
+  g_ingestUrl = String("https://") + RENDER_HOST + "/api/ingest";
 
   // Connect to Wi-Fi
   Serial.print("[WiFi] Connecting to: ");
@@ -81,8 +100,10 @@ void setup() {
     Serial.println("\n[WiFi] Connected successfully!");
     Serial.print("[WiFi] ESP32 IP Address: ");
     Serial.println(WiFi.localIP());
+    Serial.print("[CLOUD] Posting to: ");
+    Serial.println(g_ingestUrl);
   } else {
-    Serial.println("\n[WiFi] Warning: Wi-Fi not connected yet. Telemetry will buffer.");
+    Serial.println("\n[WiFi] Warning: Wi-Fi not connected yet. Will keep retrying.");
   }
 }
 
@@ -117,7 +138,7 @@ void loop() {
     }
   }
 
-  // 2. Transmit to Laptop Host App over Wi-Fi
+  // 2. Transmit to the Render website over Wi-Fi
   if (millis() - lastSendTime >= SEND_INTERVAL_MS) {
     lastSendTime = millis();
 
@@ -125,20 +146,21 @@ void loop() {
     bool isHardwareFresh = g_telem.has_received_packet &&
                            (millis() - g_telem.last_packet_time_ms <= HARDWARE_TIMEOUT_MS);
 
-    if (WiFi.status() == WL_CONNECTED && isHardwareFresh) {
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("[WiFi] Disconnected - reconnecting...");
+      WiFi.reconnect();
+    } else if (isHardwareFresh) {
       sendTelemetryToHost();
-    } else if (!isHardwareFresh && g_telem.has_received_packet) {
-      Serial.println("[BRIDGE] C2000 quiet for >3s. Suppressing stale transmission so host detects offline state.");
+    } else if (g_telem.has_received_packet) {
+      Serial.println("[BRIDGE] C2000 quiet for >3s. Suppressing stale transmission so the website shows hardware offline.");
     }
   }
 }
 
 void sendTelemetryToHost() {
-  HTTPClient http;
-  String url = String("http://") + HOST_SERVER_IP + ":" + String(HOST_PORT) + "/api/ingest";
-
-  http.begin(url);
-  http.addHeader("Content-Type", "application/json");
+  g_http.begin(g_secureClient, g_ingestUrl);
+  g_http.addHeader("Content-Type", "application/json");
+  g_http.addHeader("X-API-Key", API_KEY);
 
   // Construct JSON body (Preserve null on temperature if disconnected)
   StaticJsonDocument<256> doc;
@@ -154,11 +176,18 @@ void sendTelemetryToHost() {
   String requestBody;
   serializeJson(doc, requestBody);
 
-  int httpResponseCode = http.POST(requestBody);
-  if (httpResponseCode > 0) {
-    // Successfully sent to Laptop
+  int code = g_http.POST(requestBody);
+  if (code == 200) {
+    // Delivered - the website now shows this reading.
+  } else if (code == 401) {
+    Serial.println("[CLOUD] 401 Unauthorized: API_KEY does not match AURA_API_KEY on Render.");
+  } else if (code == 422) {
+    Serial.println("[CLOUD] 422 Rejected: a sensor value was missing (is the DS18B20 connected?).");
+  } else if (code > 0) {
+    Serial.printf("[CLOUD] Server answered HTTP %d\n", code);
   } else {
-    // Server unreachable
+    Serial.printf("[CLOUD] Post failed: %s (Render may be waking up; retrying)\n",
+                  g_http.errorToString(code).c_str());
   }
-  http.end();
+  g_http.end();
 }

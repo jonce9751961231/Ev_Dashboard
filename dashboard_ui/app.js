@@ -26,6 +26,99 @@ let isConnected = false;
 let currentActiveModel = 'ridge';
 let latestAllModels = {};
 
+// ============================================================================
+// BACKEND CONFIGURATION & CLOUD DEMO SETTINGS
+// ============================================================================
+function getBackendBaseUrl() {
+  const custom = localStorage.getItem('aura_backend_url');
+  if (custom && custom.trim()) {
+    return custom.trim().replace(/\/+$/, '');
+  }
+  if (window.AURA_CONFIG && window.AURA_CONFIG.BACKEND_URL && window.AURA_CONFIG.BACKEND_URL.trim()) {
+    return window.AURA_CONFIG.BACKEND_URL.trim().replace(/\/+$/, '');
+  }
+  if (location.protocol.startsWith('http') && location.hostname !== 'localhost' && !location.hostname.includes('127.0.0.1')) {
+    return `${location.protocol}//${location.host}`;
+  }
+  return 'http://localhost:8000';
+}
+
+function getApiKey() {
+  return (localStorage.getItem('aura_api_key') || '').trim();
+}
+
+function apiUrl(endpoint) {
+  const base = getBackendBaseUrl();
+  const cleanEp = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+  return `${base}${cleanEp}`;
+}
+
+function getAuthHeaders(headers = {}) {
+  const key = getApiKey();
+  if (key) {
+    return { ...headers, 'X-API-Key': key };
+  }
+  return headers;
+}
+
+window.toggleSettingsModal = function() {
+  const modal = document.getElementById('settings-modal');
+  if (!modal) return;
+  const isHidden = modal.classList.contains('hidden');
+  if (isHidden) {
+    const inputUrl = document.getElementById('input-backend-url');
+    const inputKey = document.getElementById('input-api-key');
+    if (inputUrl) inputUrl.value = localStorage.getItem('aura_backend_url') || getBackendBaseUrl();
+    if (inputKey) inputKey.value = getApiKey();
+    modal.classList.remove('hidden');
+  } else {
+    modal.classList.add('hidden');
+  }
+  if (window.lucide) lucide.createIcons();
+};
+
+window.saveBackendUrl = function() {
+  const inputUrl = document.getElementById('input-backend-url');
+  const inputKey = document.getElementById('input-api-key');
+  if (inputUrl) {
+    const val = inputUrl.value.trim().replace(/\/+$/, '');
+    if (val) {
+      localStorage.setItem('aura_backend_url', val);
+    } else {
+      localStorage.removeItem('aura_backend_url');
+    }
+  }
+  if (inputKey) {
+    const keyVal = inputKey.value.trim();
+    if (keyVal) {
+      localStorage.setItem('aura_api_key', keyVal);
+    } else {
+      localStorage.removeItem('aura_api_key');
+    }
+  }
+  toggleSettingsModal();
+  loadModelRegistrySpecs();
+  if (webSocket) {
+    try { webSocket.close(); } catch (_) {}
+  }
+  connectWebSocket();
+};
+
+window.resetBackendUrl = function() {
+  localStorage.removeItem('aura_backend_url');
+  localStorage.removeItem('aura_api_key');
+  const inputUrl = document.getElementById('input-backend-url');
+  const inputKey = document.getElementById('input-api-key');
+  if (inputUrl) inputUrl.value = getBackendBaseUrl();
+  if (inputKey) inputKey.value = '';
+  toggleSettingsModal();
+  loadModelRegistrySpecs();
+  if (webSocket) {
+    try { webSocket.close(); } catch (_) {}
+  }
+  connectWebSocket();
+};
+
 const MODEL_SPECS = {
   ridge: {
     title: "RIDGE REGRESSION",
@@ -85,7 +178,7 @@ const MODEL_SPECS = {
 
 async function loadModelRegistrySpecs() {
   try {
-    const res = await fetch('/api/ml/status');
+    const res = await fetch(apiUrl('/api/ml/status'));
     if (!res.ok) return;
     const data = await res.json();
     if (!data.available || !data.models) return;
@@ -140,10 +233,10 @@ window.switchActiveModel = function(modelKey) {
     skillEl.className = `px-2 py-0.5 rounded-md text-[11px] font-bold border ${spec.badgeClass}`;
   }
 
-  // 3. Inform Backend Server
-  fetch('/api/ml/select_model', {
+  // 3. Inform Backend Server (optional best-effort with auth)
+  fetch(apiUrl('/api/ml/select_model'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ model: modelKey })
   }).catch(() => {});
 
@@ -333,11 +426,14 @@ function updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30, sourc
     if (source === 'ESP32_WIFI_HARDWARE') {
       sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> HARDWARE: ESP32 WI-FI`;
       sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full flex items-center gap-1.5";
+    } else if (source === 'DEMO_SIMULATOR_CLOUD') {
+      sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> DEMO: CLOUD SIMULATOR`;
+      sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-full flex items-center gap-1.5";
     } else if (source === 'SIMULATOR_HARDWARE_OFFLINE') {
       sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> SIMULATOR (HW DROPPED)`;
       sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-amber-950 text-amber-400 border border-amber-800 rounded-full flex items-center gap-1.5";
     } else {
-      sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> SIMULATOR (DEMO)`;
+      sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> SIMULATOR (TESTBED)`;
       sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 rounded-full flex items-center gap-1.5";
     }
   }
@@ -464,9 +560,9 @@ window.changeRoadProfile = function(roadKey) {
   if (sel && sel.value !== roadKey) {
     sel.value = roadKey;
   }
-  fetch('/api/road_profile', {
+  fetch(apiUrl('/api/road_profile'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ road_type: roadKey })
   }).catch(() => {});
 };
@@ -591,9 +687,9 @@ function updateRecordingUI(rec) {
 
 window.toggleRunRecording = function() {
   const endpoint = isCurrentlyRecording ? '/api/recording/stop' : '/api/recording/start';
-  fetch(endpoint, {
+  fetch(apiUrl(endpoint), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ notes: "Web Cockpit manual recording" })
   })
     .then(r => r.json())
@@ -605,10 +701,10 @@ window.toggleRunRecording = function() {
 
 // Connect WebSocket to Python Host Server
 function connectWebSocket() {
-  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const targetUrl = (location.host && location.protocol.startsWith('http'))
-    ? `${wsProto}//${location.host}/ws/telemetry`
-    : "ws://localhost:8000/ws/telemetry";
+  const base = getBackendBaseUrl();
+  const wsProto = base.startsWith('https:') ? 'wss:' : 'ws:';
+  const hostPart = base.replace(/^https?:\/\//, '');
+  const targetUrl = `${wsProto}//${hostPart}/ws/telemetry`;
 
   try {
     webSocket = new WebSocket(targetUrl);

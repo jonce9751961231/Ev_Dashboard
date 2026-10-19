@@ -57,6 +57,11 @@
           <span>Time:</span>
           <span id="system-time" class="font-bold text-white">00:00:00</span>
         </div>
+        <!-- Backend API Settings Button -->
+        <button onclick="toggleSettingsModal()" title="Configure Backend API URL" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 hover:border-cyan-500 transition-all font-semibold shadow-sm">
+          <i data-lucide="settings" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span class="hidden sm:inline">Settings</span>
+        </button>
         <a href="https://github.com/jonce9751961231/Ev_Dashboard" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 hover:border-cyan-500 transition-all font-semibold shadow-sm">
           <i data-lucide="github" class="w-4 h-4 text-white"></i>
           <span>GitHub</span>
@@ -532,6 +537,46 @@
 
   </main>
 
+  <!-- Backend URL / Demo Settings Modal -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-6 rounded-3xl border border-slate-700 bg-slate-900 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="server" class="w-5 h-5 text-cyan-400"></i>
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Backend API Connection</h3>
+        </div>
+        <button onclick="toggleSettingsModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400 leading-relaxed">
+        When viewing the dashboard on <strong>Vercel</strong> or cloud hosting, specify the public URL of your containerized FastAPI backend.
+      </p>
+
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Backend Host URL:</label>
+        <input id="input-backend-url" type="text" placeholder="http://localhost:8000" class="w-full bg-slate-950 text-cyan-300 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-cyan-400">
+        <p class="text-[11px] text-slate-500 font-mono">Example: https://aura-ev-dashboard.onrender.com</p>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">API Key (Optional for Write Endpoints):</label>
+        <input id="input-api-key" type="password" placeholder="Leave empty for read-only" class="w-full bg-slate-950 text-slate-300 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-cyan-400">
+      </div>
+
+      <div class="pt-2 flex items-center justify-between gap-3 text-xs">
+        <button onclick="resetBackendUrl()" class="px-3 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white">
+          Reset Default
+        </button>
+        <button onclick="saveBackendUrl()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-all shadow-md shadow-cyan-600/30">
+          Save & Reconnect
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: thermapulse-ev-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: DEMO_MODE
+        value: "1"
+      - key: AURA_API_KEY
+        generateValue: true
+      - key: PORT
+        value: "8000"
+    autoDeploy: true

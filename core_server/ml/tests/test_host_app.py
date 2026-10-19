@@ -20,7 +20,9 @@ def client():
     """Fresh module state for every test; ML off unless a test turns it on."""
     h.latest_live_telemetry = None
     h.latest_live_at = 0.0
+    h.latest_broadcast_payload = None
     h.g_last_source = None
+    h.DEMO_MODE = False
     saved = h.ml_predictor
     h.ml_predictor = None
     yield TestClient(h.app)
@@ -136,4 +138,14 @@ def test_api_key_auth_enforced(client):
         assert r.status_code == 200
     finally:
         h.AURA_API_KEY = saved_key
+
+
+def test_cloud_demo_mode_labels_source(client):
+    h.DEMO_MODE = True
+    msg = first_message(client)
+    assert msg["source"] == "DEMO_SIMULATOR_CLOUD"
+    assert msg["demo_mode"] is True
+    health = client.get("/api/health").json()
+    assert health["demo_mode"] is True
+
 

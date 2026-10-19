@@ -24,19 +24,25 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-// --- Wi-Fi Credentials ---
+// ============================================================================
+// 1. WI-FI & RENDER HOST CONFIGURATION
+// ============================================================================
+// Enter your real Wi-Fi or Mobile Hotspot credentials here:
 const char* WIFI_SSID     = "Your_WiFi_Or_Hotspot_SSID";
 const char* WIFI_PASSWORD = "Your_WiFi_Password";
 
-// --- Render website (HTTPS, port 443) ---
-const char* RENDER_HOST = "thermapulse-ev.onrender.com";   // Live Render website URL
-const char* API_KEY     = ""; // Unset on Render, leave empty
+// Live Render public endpoint (HTTPS port 443)
+const char* RENDER_HOST   = "thermapulse-ev.onrender.com";
+const char* API_KEY       = ""; // Empty if AURA_API_KEY is not set on Render
 
-// --- UART2 Pins for C2000 LaunchPad ---
-#define RXD2 16   // Connect to C2000 GPIO 29 (SCIA_TX)
-#define TXD2 17   // Connect to C2000 GPIO 28 (SCIA_RX)
+// ============================================================================
+// 2. PIN DEFINITIONS & LED STATUS INDICATOR
+// ============================================================================
+#define RXD2 16      // Connect to C2000 GPIO 29 (SCIA_TX)
+#define TXD2 17      // Connect to C2000 GPIO 28 (SCIA_RX)
+#define LED_PIN 2    // Built-in Blue LED on ESP32 (Visual Status)
 
-// Telemetry State - Ground Truth (NO FAKE DEFAULTS)
+// Telemetry State - Ground Truth
 struct TelemetryData {
   float voltage_v;
   float current_a;
@@ -47,27 +53,27 @@ struct TelemetryData {
   bool  has_received_packet;
 } g_telem;
 
-// One TLS connection is kept open and reused, because a new HTTPS handshake
-// every second is slow and uses a lot of ESP32 memory.
 WiFiClientSecure g_secureClient;
 HTTPClient       g_http;
 String           g_ingestUrl;
 
 unsigned long lastSendTime = 0;
-const unsigned long SEND_INTERVAL_MS = 1000;   // 1 Hz rate matches host dashboard & ML window
-const unsigned long HARDWARE_TIMEOUT_MS = 3000; // Stop streaming if C2000 quiet for >3s
+const unsigned long SEND_INTERVAL_MS = 1000;    // 1 Hz transmission
+const unsigned long HARDWARE_TIMEOUT_MS = 3000;  // 3s timeout
 
 void setup() {
-  Serial.begin(115200);   // USB Serial Monitor debug
-  Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2); // High-speed C2000 UART
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
-  delay(1000);
+  Serial.begin(115200);
+  Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
+
+  delay(500);
   Serial.println("\n========================================================");
-  Serial.println("   ESP32-S (38-PIN) C2000 TO RENDER WEBSITE TELEMETRY BRIDGE");
-  Serial.println("   Target: 12V DC Motor Testbed (Honest Ground-Truth)");
+  Serial.println("   THERMAPULSE EV - AUTONOMOUS STANDALONE ESP32 BRIDGE");
   Serial.println("========================================================");
 
-  // Initialize Ground-Truth State: 0/NAN until C2000 actually sends data
+  // Initialize Ground-Truth Telemetry
   g_telem.voltage_v = 0.0;
   g_telem.current_a = 0.0;
   g_telem.rpm       = 0;
@@ -76,39 +82,39 @@ void setup() {
   g_telem.last_packet_time_ms = 0;
   g_telem.has_received_packet = false;
 
-  // HTTPS client setup.
-  // setInsecure() encrypts the traffic but does not verify the server certificate.
-  // That is fine for this project; for stricter security pin Render's root CA instead.
   g_secureClient.setInsecure();
-  g_http.setReuse(true);          // keep the TLS connection open between posts
-  g_http.setTimeout(8000);        // Render's free tier can take a while to wake up
   g_ingestUrl = String("https://") + RENDER_HOST + "/api/ingest";
 
-  // Connect to Wi-Fi
-  Serial.print("[WiFi] Connecting to: ");
-  Serial.println(WIFI_SSID);
+  // Wi-Fi Setup with persistent auto-reconnect
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
+  Serial.printf("[WiFi] Connecting to: %s\n", WIFI_SSID);
+
+  // Blink LED rapidly while connecting
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED && attempts < 25) {
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+    delay(300);
     Serial.print(".");
     attempts++;
   }
 
   if (WiFi.status() == WL_CONNECTED) {
+    digitalWrite(LED_PIN, HIGH); // Solid ON when connected
     Serial.println("\n[WiFi] Connected successfully!");
-    Serial.print("[WiFi] ESP32 IP Address: ");
+    Serial.print("[WiFi] IP: ");
     Serial.println(WiFi.localIP());
-    Serial.print("[CLOUD] Posting to: ");
-    Serial.println(g_ingestUrl);
   } else {
-    Serial.println("\n[WiFi] Warning: Wi-Fi not connected yet. Will keep retrying.");
+    digitalWrite(LED_PIN, LOW);
+    Serial.println("\n[WiFi] Connecting in background...");
   }
 }
 
 void loop() {
-  // 1. Read Serial Packets from TMS320F2800137 LaunchPad
+  // 1. Ingest Serial Packets from C2000 LaunchPad
   while (Serial2.available() > 0) {
     String line = Serial2.readStringUntil('\n');
     line.trim();
@@ -130,39 +136,47 @@ void loop() {
         }
         g_telem.last_packet_time_ms = millis();
         g_telem.has_received_packet = true;
-
-        Serial.printf("[C2000 RX] V: %.2fV | I: %.2fA | RPM: %d | Temp: %s\n",
-                      g_telem.voltage_v, g_telem.current_a, g_telem.rpm,
-                      g_telem.temp_valid ? String(g_telem.temp_c, 1).c_str() : "DISCONN");
       }
     }
   }
 
-  // 2. Transmit to the Render website over Wi-Fi
+  // 2. 1 Hz Transmission to Render Cloud
   if (millis() - lastSendTime >= SEND_INTERVAL_MS) {
     lastSendTime = millis();
 
-    // Ground-truth integrity: Do NOT re-send stale data if C2000 goes quiet!
+    if (WiFi.status() != WL_CONNECTED) {
+      digitalWrite(LED_PIN, LOW); // LED OFF = Wi-Fi disconnected
+      Serial.println("[WiFi] Reconnecting...");
+      WiFi.reconnect();
+      return;
+    }
+
+    // Ground-truth check: transmit fresh hardware telemetry
     bool isHardwareFresh = g_telem.has_received_packet &&
                            (millis() - g_telem.last_packet_time_ms <= HARDWARE_TIMEOUT_MS);
 
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("[WiFi] Disconnected - reconnecting...");
-      WiFi.reconnect();
-    } else if (isHardwareFresh) {
+    if (isHardwareFresh) {
       sendTelemetryToHost();
-    } else if (g_telem.has_received_packet) {
-      Serial.println("[BRIDGE] C2000 quiet for >3s. Suppressing stale transmission so the website shows hardware offline.");
+    } else {
+      // Wi-Fi is ready, but waiting for C2000 packets: keep LED solid ON
+      digitalWrite(LED_PIN, HIGH);
     }
   }
 }
 
 void sendTelemetryToHost() {
-  g_http.begin(g_secureClient, g_ingestUrl);
-  g_http.addHeader("Content-Type", "application/json");
-  g_http.addHeader("X-API-Key", API_KEY);
+  // Begin fresh connection with error isolation
+  if (!g_http.begin(g_secureClient, g_ingestUrl)) {
+    g_secureClient.stop();
+    return;
+  }
 
-  // Construct JSON body (Preserve null on temperature if disconnected)
+  g_http.setTimeout(7000);
+  g_http.addHeader("Content-Type", "application/json");
+  if (strlen(API_KEY) > 0) {
+    g_http.addHeader("X-API-Key", API_KEY);
+  }
+
   StaticJsonDocument<256> doc;
   doc["voltage_v"] = g_telem.voltage_v;
   doc["current_a"] = g_telem.current_a;
@@ -178,16 +192,13 @@ void sendTelemetryToHost() {
 
   int code = g_http.POST(requestBody);
   if (code == 200) {
-    // Delivered - the website now shows this reading.
-  } else if (code == 401) {
-    Serial.println("[CLOUD] 401 Unauthorized: API_KEY does not match AURA_API_KEY on Render.");
-  } else if (code == 422) {
-    Serial.println("[CLOUD] 422 Rejected: a sensor value was missing (is the DS18B20 connected?).");
-  } else if (code > 0) {
-    Serial.printf("[CLOUD] Server answered HTTP %d\n", code);
+    // Pulse LED: Turn OFF briefly (50ms) then back ON to show active cloud streaming!
+    digitalWrite(LED_PIN, LOW);
+    delay(50);
+    digitalWrite(LED_PIN, HIGH);
   } else {
-    Serial.printf("[CLOUD] Post failed: %s (Render may be waking up; retrying)\n",
-                  g_http.errorToString(code).c_str());
+    // Force cleanup on failure or timeout so subsequent attempts never freeze
+    g_secureClient.stop();
   }
   g_http.end();
 }

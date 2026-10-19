@@ -638,7 +638,7 @@ def compute_canonical_telemetry_tick() -> Dict[str, Any]:
     # Live hardware only counts while fresh samples keep arriving (within 5 seconds).
     hardware_live = (latest_live_telemetry is not None
                      and time.time() - latest_live_at <= HARDWARE_STALE_AFTER_S)
-    if hardware_live and not DEMO_MODE:
+    if hardware_live:
         step_data = latest_live_telemetry.copy()
         source = "ESP32_WIFI_HARDWARE"
     else:

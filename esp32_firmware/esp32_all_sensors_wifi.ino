@@ -20,16 +20,21 @@
  ******************************************************************************/
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
 // ============================================================================
-// 1. WI-FI & LAPTOP HOST SERVER CONFIGURATION
+// 1. WI-FI & RENDER CLOUD HOST CONFIGURATION
 // ============================================================================
-const char* ssid     = "DELL";          // <-- Your Wi-Fi Name / Hotspot
-const char* password = "password";      // <-- Your Wi-Fi Password
-const char* serverUrl = "http://10.128.151.33:8000/api/ingest";
+const char* ssid      = "DELL";          // <-- Your Wi-Fi Name / Mobile Hotspot
+const char* password  = "password";      // <-- Your Wi-Fi Password
+
+// Public Render Website URL (e.g. "https://thermapulse-ev.onrender.com/api/ingest")
+// Or local IP: "http://192.168.1.100:8000/api/ingest"
+const char* serverUrl = "https://thermapulse-ev.onrender.com/api/ingest";
+const char* apiKey    = ""; // Leave empty if AURA_API_KEY is unset on Render
 
 // ============================================================================
 // 2. PIN DEFINITIONS (SAFE ADC1 PINS - NEVER USE GPIO 12!)
@@ -165,17 +170,32 @@ void loop() {
 
     Serial.printf("[JSON Output]: %s\n", jsonBuffer);
 
-    // 7. Transmit to Laptop Host Server via Wi-Fi HTTP POST
+    // 7. Transmit to Render Website via Wi-Fi HTTP(S) POST
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
-      http.begin(serverUrl);
+      String urlStr = String(serverUrl);
+
+      if (urlStr.startsWith("https://")) {
+        WiFiClientSecure secureClient;
+        secureClient.setInsecure(); // SSL without cert validation
+        http.begin(secureClient, urlStr);
+      } else {
+        WiFiClient plainClient;
+        http.begin(plainClient, urlStr);
+      }
+
       http.addHeader("Content-Type", "application/json");
+      if (strlen(apiKey) > 0) {
+        http.addHeader("X-API-Key", apiKey);
+      }
 
       int httpResponseCode = http.POST(jsonBuffer);
-      if (httpResponseCode > 0) {
-        Serial.printf("[Wi-Fi POST OK] HTTP %d (Sent to Dashboard)\n\n", httpResponseCode);
+      if (httpResponseCode == 200) {
+        Serial.printf("[CLOUD POST OK] HTTP 200 -> Render Live!\n\n");
+      } else if (httpResponseCode > 0) {
+        Serial.printf("[CLOUD POST] Server answered HTTP %d\n\n", httpResponseCode);
       } else {
-        Serial.printf("[Wi-Fi POST Error] %s\n\n", http.errorToString(httpResponseCode).c_str());
+        Serial.printf("[CLOUD POST Error] %s\n\n", http.errorToString(httpResponseCode).c_str());
       }
       http.end();
     } else {

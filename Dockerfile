@@ -9,7 +9,7 @@ WORKDIR /app
 # Set container environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DEMO_MODE=1 \
+    DEMO_MODE=0 \
     PORT=8000
 
 # Install minimal OS build dependencies

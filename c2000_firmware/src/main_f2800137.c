@@ -83,7 +83,6 @@ int main(void) {
 // Initialize ADC-A for Voltage (ADCINA0) and Current (ADCINA1)
 void initADC(void) {
     ADC_setPrescaler(ADCA_BASE, ADC_CLK_DIV_2_0);
-    ADC_setMode(ADCA_BASE, ADC_RESOLUTION_12BIT, ADC_MODE_SINGLE_ENDED);
     ADC_enableConverter(ADCA_BASE);
     DEVICE_DELAY_US(1000);
 

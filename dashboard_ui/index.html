@@ -31,6 +31,10 @@
               <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span>LIVE STREAM (1 Hz)</span>
             </span>
+            <span id="esp-status-badge" class="px-2 py-0.5 text-[10px] sm:text-xs font-bold bg-rose-950 text-rose-300 border border-rose-800 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-sm shadow-rose-950/40">
+              <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500"></span>
+              <span id="esp-status-text">ESP32: DISCONNECTED</span>
+            </span>
             <span id="source-badge" class="px-2 py-0.5 text-[10px] sm:text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 rounded-full flex items-center gap-1 sm:gap-1.5">
               <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-slate-400"></span>
               <span class="truncate max-w-[130px] sm:max-w-none">SOURCE: DETECTING...</span>
@@ -117,12 +121,12 @@
             </div>
           </div>
           <div class="mt-2 sm:mt-3 flex items-baseline space-x-1">
-            <span id="val-temp" class="text-2xl sm:text-3xl lg:text-4xl font-black text-rose-400 font-mono tracking-tight">--.-</span>
+            <span id="val-temp" class="text-2xl sm:text-3xl lg:text-4xl font-black text-rose-400 font-mono tracking-tight">0.0</span>
             <span class="text-sm sm:text-base lg:text-lg font-bold text-slate-400">°C</span>
           </div>
           <div class="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
             <span class="truncate">DS18B20</span>
-            <span class="text-emerald-400 font-semibold" id="temp-status">Normal</span>
+            <span class="text-rose-400 font-semibold" id="temp-status">ESP32 Offline</span>
           </div>
         </div>
 
@@ -135,7 +139,7 @@
             </div>
           </div>
           <div class="mt-2 sm:mt-3 flex items-baseline space-x-1">
-            <span id="val-voltage" class="text-2xl sm:text-3xl lg:text-4xl font-black text-amber-400 font-mono tracking-tight">--.--</span>
+            <span id="val-voltage" class="text-2xl sm:text-3xl lg:text-4xl font-black text-amber-400 font-mono tracking-tight">0.00</span>
             <span class="text-sm sm:text-base lg:text-lg font-bold text-slate-400">V</span>
           </div>
           <div class="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
@@ -153,12 +157,12 @@
             </div>
           </div>
           <div class="mt-2 sm:mt-3 flex items-baseline space-x-1">
-            <span id="val-current" class="text-2xl sm:text-3xl lg:text-4xl font-black text-cyan-400 font-mono tracking-tight">-.--</span>
+            <span id="val-current" class="text-2xl sm:text-3xl lg:text-4xl font-black text-cyan-400 font-mono tracking-tight">0.00</span>
             <span class="text-sm sm:text-base lg:text-lg font-bold text-slate-400">A</span>
           </div>
           <div class="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
             <span class="truncate">ACS712</span>
-            <span class="text-slate-300">5A Range</span>
+            <span id="current-hw-status" class="text-rose-400 font-semibold">● Offline (0.00A)</span>
           </div>
         </div>
 
@@ -171,7 +175,7 @@
             </div>
           </div>
           <div class="mt-2 sm:mt-3 flex items-baseline space-x-1">
-            <span id="val-rpm" class="text-2xl sm:text-3xl lg:text-4xl font-black text-purple-400 font-mono tracking-tight">----</span>
+            <span id="val-rpm" class="text-2xl sm:text-3xl lg:text-4xl font-black text-purple-400 font-mono tracking-tight">0</span>
             <span class="text-sm sm:text-base lg:text-lg font-bold text-slate-400">RPM</span>
           </div>
           <div class="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
@@ -189,7 +193,7 @@
             </div>
           </div>
           <div class="mt-2 sm:mt-3 flex items-baseline space-x-1">
-            <span id="val-power" class="text-2xl sm:text-3xl lg:text-4xl font-black text-emerald-400 font-mono tracking-tight">--.-</span>
+            <span id="val-power" class="text-2xl sm:text-3xl lg:text-4xl font-black text-emerald-400 font-mono tracking-tight">0.0</span>
             <span class="text-sm sm:text-base lg:text-lg font-bold text-slate-400">W</span>
           </div>
           <div class="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">
@@ -207,7 +211,7 @@
             </div>
           </div>
           <div class="mt-2 sm:mt-3 flex items-baseline space-x-1">
-            <span id="val-torque" class="text-2xl sm:text-3xl lg:text-4xl font-black text-indigo-400 font-mono tracking-tight">-.--</span>
+            <span id="val-torque" class="text-2xl sm:text-3xl lg:text-4xl font-black text-indigo-400 font-mono tracking-tight">0.00</span>
             <span class="text-sm sm:text-base lg:text-lg font-bold text-slate-400">Nm</span>
           </div>
           <div class="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/80">

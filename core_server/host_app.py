@@ -434,11 +434,16 @@ def get_health():
             fallback_active = True
             fallback_reason = f"Warmup in progress ({ml_state.get('seconds_to_ready', 0)}s left)"
 
+    is_esp_connected = (latest_live_telemetry is not None
+                        and time.time() - latest_live_at <= HARDWARE_STALE_AFTER_S)
+
     return {
         "status": "ONLINE",
         "service": "ThermaPulse EV Cockpit - 12V DC Host App",
         "system": "12V DC Motor Continuous Testbed",
         "pipeline": "Sensors -> TMS320F2800137 -> UART -> ESP32-S Wi-Fi -> Laptop Host App",
+        "esp32_connected": is_esp_connected,
+        "last_hardware_packet_seconds_ago": round(time.time() - latest_live_at, 1) if latest_live_at > 0 else None,
         "model_loaded": rf_model is not None or ml_predictor is not None,
         "rf_ok": rf_model is not None and rf_failures == 0,
         "rf_failures": rf_failures,
@@ -641,21 +646,34 @@ def compute_canonical_telemetry_tick() -> Dict[str, Any]:
     if hardware_live:
         step_data = latest_live_telemetry.copy()
         source = "ESP32_WIFI_HARDWARE"
-    else:
+        esp32_connected = True
+    elif DEMO_MODE:
         step_data = simulator.step()
-        if DEMO_MODE:
-            source = "DEMO_SIMULATOR_CLOUD"
-        elif latest_live_telemetry is not None:
-            source = "SIMULATOR_HARDWARE_OFFLINE"
-        else:
-            source = "12V_SIMULATOR_TESTBED"
+        source = "DEMO_SIMULATOR_CLOUD"
+        esp32_connected = False
+    else:
+        # ESP32 is offline / disconnected / not transmitting:
+        # Strictly output 0.0 for all operational metrics (voltage, current, rpm, power, torque, etc.)
+        source = "ESP32_DISCONNECTED"
+        esp32_connected = False
+        step_data = {
+            "voltage_v": 0.0,
+            "current_a": 0.0,
+            "rpm": 0,
+            "temp_c": 0.0,
+            "power_w": 0.0,
+            "joule_loss_w": 0.0,
+            "dt_temp_rate": 0.0,
+            "ambient_temp_c": 28.0,
+            "ambient_measured": False
+        }
 
     if ml_predictor is not None:
         with ml_lock:
             if source != g_last_source:      # never mix history across hardware and simulator
                 ml_predictor.reset()
                 g_last_source = source
-            if source != "ESP32_WIFI_HARDWARE":   # hardware samples are pushed by /api/ingest
+            if DEMO_MODE and source != "ESP32_WIFI_HARDWARE":   # hardware samples are pushed by /api/ingest
                 ml_predictor.push(step_data["voltage_v"], step_data["current_a"],
                                   step_data["rpm"], step_data["temp_c"],
                                   step_data["ambient_temp_c"])
@@ -665,16 +683,26 @@ def compute_canonical_telemetry_tick() -> Dict[str, Any]:
     g_last_energy_tick = now_time
 
     pwr_w = float(step_data["power_w"])
-    g_cumulative_energy_wh += (pwr_w * dt_sec) / 3600.0
+    if hardware_live or DEMO_MODE:
+        g_cumulative_energy_wh += (pwr_w * dt_sec) / 3600.0
 
     # Multi-Horizon Future Energy Consumption Forecasts
-    pred_e_5m = round(pwr_w * (5.0 / 60.0), 2)
-    pred_e_15m = round(pwr_w * (15.0 / 60.0), 2)
-    pred_e_30m = round(pwr_w * (30.0 / 60.0), 2)
+    if pwr_w > 0.0:
+        pred_e_5m = round(pwr_w * (5.0 / 60.0), 2)
+        pred_e_15m = round(pwr_w * (15.0 / 60.0), 2)
+        pred_e_30m = round(pwr_w * (30.0 / 60.0), 2)
+    else:
+        pred_e_5m = 0.0
+        pred_e_15m = 0.0
+        pred_e_30m = 0.0
 
     # Road longitudinal dynamics & remaining range
-    speed_kmh = max(5.0, round((step_data["rpm"] * 60.0 * 0.15) / 1000.0, 1))
-    road_forecast = road_energy_predictor.predict_energy_and_range(speed_kmh, battery_soc=0.85, total_battery_kwh=1.2)
+    if step_data["rpm"] <= 0:
+        speed_kmh = 0.0
+    else:
+        speed_kmh = round((step_data["rpm"] * 60.0 * 0.15) / 1000.0, 1)
+
+    road_forecast = road_energy_predictor.predict_energy_and_range(max(5.0, speed_kmh), battery_soc=0.85, total_battery_kwh=1.2)
 
     # Multi-model thermal forecasting
     all_models: Dict[str, Any] = {}
@@ -764,27 +792,33 @@ def compute_canonical_telemetry_tick() -> Dict[str, Any]:
             p1, p5, p15, p30 = m_preds["1m"], m_preds["5m"], m_preds["15m"], m_preds["30m"]
 
         # Compute Proactive Thermal Safety Thresholds & Time-To-Threshold
-        if p5 is not None:
-            if p5 >= 55.0 or (p15 is not None and p15 >= 65.0):
-                warning_level = "CRITICAL"
-                advisory_text = "CRITICAL: Motor casing will exceed 55°C within 5 min! Reduce current or stop motor."
-            elif p5 >= 48.0 or (p15 is not None and p15 >= 55.0):
-                warning_level = "ELEVATED"
-                advisory_text = "ELEVATED: High continuous thermal loading. Projected to reach 55°C limit soon."
-            else:
-                warning_level = "NORMAL"
-                advisory_text = "NORMAL: Temperature dynamics within safe continuous operating limits."
+        if not esp32_connected and not DEMO_MODE:
+            warning_level = "OFFLINE"
+            advisory_text = "ESP32 DISCONNECTED: Current and motor telemetry at 0. Awaiting live data from ESP32."
+            ttt_min = None
+        else:
+            if p5 is not None:
+                if p5 >= 55.0 or (p15 is not None and p15 >= 65.0):
+                    warning_level = "CRITICAL"
+                    advisory_text = "CRITICAL: Motor casing will exceed 55°C within 5 min! Reduce current or stop motor."
+                elif p5 >= 48.0 or (p15 is not None and p15 >= 55.0):
+                    warning_level = "ELEVATED"
+                    advisory_text = "ELEVATED: High continuous thermal loading. Projected to reach 55°C limit soon."
+                else:
+                    warning_level = "NORMAL"
+                    advisory_text = "NORMAL: Temperature dynamics within safe continuous operating limits."
 
-        if cur_t >= OVERHEAT_LIMIT_C:
-            ttt_min = 0.0
-        elif p5 is not None and p5 > cur_t:
-            rate_per_min = (p5 - cur_t) / 5.0
-            if rate_per_min > 0.02:
-                ttt_min = round(max(0.1, (OVERHEAT_LIMIT_C - cur_t) / rate_per_min), 1)
+            if cur_t >= OVERHEAT_LIMIT_C:
+                ttt_min = 0.0
+            elif p5 is not None and p5 > cur_t:
+                rate_per_min = (p5 - cur_t) / 5.0
+                if rate_per_min > 0.02:
+                    ttt_min = round(max(0.1, (OVERHEAT_LIMIT_C - cur_t) / rate_per_min), 1)
 
     payload = {
         "timestamp": datetime.now().strftime("%H:%M:%S"),
         "source": source,
+        "esp32_connected": esp32_connected,
         "demo_mode": DEMO_MODE,
         "system": "12V DC Motor Testbed",
         "mcu_pipeline": "TMS320F2800137 -> ESP32-S Wi-Fi -> Host App",
@@ -794,14 +828,15 @@ def compute_canonical_telemetry_tick() -> Dict[str, Any]:
             "rpm": step_data["rpm"],
             "temp_c": step_data["temp_c"],
             "stator_temp": step_data["temp_c"],  # backwards-compatible key
-            "rotor_temp": round(step_data["temp_c"] - 2.5, 2) if step_data["temp_c"] is not None else None,
+            "rotor_temp": 0.0 if not esp32_connected else (round(step_data["temp_c"] - 2.5, 2) if step_data["temp_c"] is not None else None),
             "power_w": step_data["power_w"],
             "joule_loss_w": step_data["joule_loss_w"],
             "torque_nm": round(step_data["current_a"] * 0.08, 2),
             "speed_kmh": speed_kmh,
             "dt_temp_rate": step_data["dt_temp_rate"],
             "ambient_temp_c": step_data["ambient_temp_c"],
-            "ambient_measured": step_data.get("ambient_measured", False)
+            "ambient_measured": step_data.get("ambient_measured", False),
+            "esp32_connected": esp32_connected
         },
         "predictions": {
             "pred_1m_c": p1,

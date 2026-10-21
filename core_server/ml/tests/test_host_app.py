@@ -70,9 +70,20 @@ def test_measured_ambient_is_used_and_flagged(client):
 
 def test_hardware_going_quiet_is_reported(client):
     client.post("/api/ingest", json={"v": 12.0, "i": 2.0, "rpm": 1500, "temp": 40.0})
-    assert first_message(client)["source"] == "ESP32_WIFI_HARDWARE"
+    msg_live = first_message(client)
+    assert msg_live["source"] == "ESP32_WIFI_HARDWARE"
+    assert msg_live["esp32_connected"] is True
+    assert msg_live["telemetry"]["current_a"] == 2.0
+    assert msg_live["telemetry"]["voltage_v"] == 12.0
+
     h.latest_live_at = time.time() - 60          # ESP32 silent for a minute
-    assert first_message(client)["source"] == "SIMULATOR_HARDWARE_OFFLINE"
+    msg_quiet = first_message(client)
+    assert msg_quiet["source"] == "ESP32_DISCONNECTED"
+    assert msg_quiet["esp32_connected"] is False
+    assert msg_quiet["telemetry"]["current_a"] == 0.0
+    assert msg_quiet["telemetry"]["voltage_v"] == 0.0
+    assert msg_quiet["telemetry"]["rpm"] == 0
+    assert msg_quiet["telemetry"]["power_w"] == 0.0
 
 
 def test_payload_says_when_no_ml_models_exist(client):

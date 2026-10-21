@@ -348,7 +348,15 @@ function initLiveChart() {
 }
 
 // Update Dashboard UI with latest values
-function updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30, source, preds, telem) {
+function updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30, source, preds, telem, payload) {
+  const isEspConnected = (payload && payload.esp32_connected !== undefined)
+    ? !!payload.esp32_connected
+    : ((telem && telem.esp32_connected !== undefined)
+      ? !!telem.esp32_connected
+      : (source === 'ESP32_WIFI_HARDWARE'));
+  const isDemo = !!(payload && payload.demo_mode);
+  const isLive = isEspConnected || isDemo;
+
   // Ambient Temperature Indicator
   const ambEl = document.getElementById('ambient-indicator');
   if (ambEl && telem) {
@@ -362,23 +370,34 @@ function updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30, sourc
     }
   }
 
+  // When ESP32 is offline and not in demo mode, values strictly stay at 0
+  const dispV = isLive ? ((v !== null && !isNaN(v)) ? v : 0.0) : 0.0;
+  const dispI = isLive ? ((i !== null && !isNaN(i)) ? i : 0.0) : 0.0;
+  const dispRpm = isLive ? ((rpm !== null && !isNaN(rpm)) ? Math.round(rpm) : 0) : 0;
+  const dispPwr = isLive ? ((pwr !== null && !isNaN(pwr)) ? pwr : 0.0) : 0.0;
+  const dispTorque = isLive ? ((torque !== null && !isNaN(torque)) ? torque : 0.0) : 0.0;
+  const dispTemp = isLive ? ((temp !== null && !isNaN(temp)) ? temp : null) : 0.0;
+  const isTempValid = isLive && temp !== null && !isNaN(temp) && temp > -50 && temp < 150;
+
   // 1. Current Temperature
   const tempEl = document.getElementById('val-temp');
   const statusEl = document.getElementById('temp-status');
-  const isTempValid = temp !== null && !isNaN(temp) && temp > -50 && temp < 150;
 
   if (tempEl) {
-    tempEl.textContent = isTempValid ? temp.toFixed(1) : '--';
+    tempEl.textContent = (dispTemp !== null && !isNaN(dispTemp)) ? dispTemp.toFixed(1) : '--';
   }
 
   if (statusEl) {
-    if (!isTempValid) {
+    if (!isLive) {
+      statusEl.textContent = "ESP32 Offline";
+      statusEl.className = "text-rose-400 font-semibold";
+    } else if (!isTempValid) {
       statusEl.textContent = "Sensor Disconnected";
       statusEl.className = "text-rose-400 font-bold";
-    } else if (temp < 45.0) {
+    } else if (dispTemp < 45.0) {
       statusEl.textContent = "Optimal";
       statusEl.className = "text-emerald-400 font-semibold";
-    } else if (temp < 60.0) {
+    } else if (dispTemp < 60.0) {
       statusEl.textContent = "Elevated";
       statusEl.className = "text-amber-400 font-semibold";
     } else {
@@ -389,52 +408,74 @@ function updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30, sourc
 
   // 2. Voltage
   const voltEl = document.getElementById('val-voltage');
-  if (voltEl) voltEl.textContent = (v !== null && !isNaN(v)) ? v.toFixed(2) : '--';
+  if (voltEl) voltEl.textContent = dispV.toFixed(2);
 
   // 3. Current
   const currEl = document.getElementById('val-current');
-  if (currEl) currEl.textContent = (i !== null && !isNaN(i)) ? i.toFixed(2) : '--';
+  if (currEl) currEl.textContent = dispI.toFixed(2);
+  const currHwStatus = document.getElementById('current-hw-status');
+  if (currHwStatus) {
+    if (isEspConnected) {
+      currHwStatus.textContent = "● ESP32 Live";
+      currHwStatus.className = "text-emerald-400 font-semibold";
+    } else {
+      currHwStatus.textContent = "● Offline (0.00A)";
+      currHwStatus.className = "text-rose-400 font-semibold";
+    }
+  }
 
   // 4. Motor RPM
   const rpmEl = document.getElementById('val-rpm');
-  if (rpmEl) rpmEl.textContent = (rpm !== null && !isNaN(rpm)) ? Math.round(rpm) : '--';
+  if (rpmEl) rpmEl.textContent = dispRpm.toString();
 
   // 5. Electrical Power
   const pwrEl = document.getElementById('val-power');
-  if (pwrEl) pwrEl.textContent = (pwr !== null && !isNaN(pwr)) ? pwr.toFixed(1) : '--';
+  if (pwrEl) pwrEl.textContent = dispPwr.toFixed(1);
 
   // 6. Motor Torque (Nm)
   const torqueEl = document.getElementById('val-torque');
-  if (torqueEl) torqueEl.textContent = (torque !== null && !isNaN(torque)) ? torque.toFixed(2) : '--';
+  if (torqueEl) torqueEl.textContent = dispTorque.toFixed(2);
 
   // 7. Predicted Temperatures
   const p1El = document.getElementById('pred-1m');
-  if (p1El) p1El.textContent = (p1 !== null && !isNaN(p1)) ? p1.toFixed(1) : '--';
+  if (p1El) p1El.textContent = (isLive && p1 !== null && !isNaN(p1)) ? p1.toFixed(1) : (isLive ? '--' : '0.0');
 
   const p5El = document.getElementById('pred-5m');
-  if (p5El) p5El.textContent = (p5 !== null && !isNaN(p5)) ? p5.toFixed(1) : '--';
+  if (p5El) p5El.textContent = (isLive && p5 !== null && !isNaN(p5)) ? p5.toFixed(1) : (isLive ? '--' : '0.0');
 
   const p15El = document.getElementById('pred-15m');
-  if (p15El) p15El.textContent = (p15 !== null && !isNaN(p15)) ? p15.toFixed(1) : '--';
+  if (p15El) p15El.textContent = (isLive && p15 !== null && !isNaN(p15)) ? p15.toFixed(1) : (isLive ? '--' : '0.0');
 
   const p30El = document.getElementById('pred-30m');
-  if (p30El) p30El.textContent = (p30 !== null && !isNaN(p30)) ? p30.toFixed(1) : '--';
+  if (p30El) p30El.textContent = (isLive && p30 !== null && !isNaN(p30)) ? p30.toFixed(1) : (isLive ? '--' : '0.0');
 
-  // 8. Update Data Source Badge
+  // 8. Update Dedicated ESP32 Status Badge
+  const espBadge = document.getElementById('esp-status-badge');
+  if (espBadge) {
+    if (isEspConnected) {
+      espBadge.innerHTML = `<span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse"></span><span id="esp-status-text">ESP32: CONNECTED</span>`;
+      espBadge.className = "px-2 py-0.5 text-[10px] sm:text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-sm shadow-emerald-900/30";
+    } else {
+      espBadge.innerHTML = `<span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500"></span><span id="esp-status-text">ESP32: DISCONNECTED</span>`;
+      espBadge.className = "px-2 py-0.5 text-[10px] sm:text-xs font-bold bg-rose-950 text-rose-300 border border-rose-800 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-sm shadow-rose-950/40";
+    }
+  }
+
+  // 9. Update Data Source Badge
   const sourceBadge = document.getElementById('source-badge');
   if (sourceBadge) {
-    if (source === 'ESP32_WIFI_HARDWARE') {
+    if (source === 'ESP32_WIFI_HARDWARE' || isEspConnected) {
       sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> HARDWARE: ESP32 WI-FI`;
       sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full flex items-center gap-1.5";
-    } else if (source === 'DEMO_SIMULATOR_CLOUD') {
+    } else if (source === 'DEMO_SIMULATOR_CLOUD' || isDemo) {
       sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> DEMO: CLOUD SIMULATOR`;
       sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800 rounded-full flex items-center gap-1.5";
     } else if (source === 'SIMULATOR_HARDWARE_OFFLINE') {
       sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> SIMULATOR (HW DROPPED)`;
       sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-amber-950 text-amber-400 border border-amber-800 rounded-full flex items-center gap-1.5";
     } else {
-      sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> SIMULATOR (TESTBED)`;
-      sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 rounded-full flex items-center gap-1.5";
+      sourceBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> ESP32: OFFLINE`;
+      sourceBadge.className = "px-2 py-0.5 text-xs font-semibold bg-rose-950 text-rose-300 border border-rose-800 rounded-full flex items-center gap-1.5";
     }
   }
 
@@ -609,10 +650,10 @@ function updateThermalSafetyUI(thermalSafety, preds) {
       iconDiv.className = "p-2 sm:p-2.5 rounded-xl bg-amber-500/20 text-amber-300 shrink-0";
       iconDiv.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
     }
-  } else if (level === 'SENSOR_OFFLINE') {
+  } else if (level === 'OFFLINE' || level === 'SENSOR_OFFLINE') {
     banner.className = "transition-all duration-300 rounded-2xl p-3 sm:p-4 border border-rose-800 bg-slate-900 text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-lg";
     if (levelEl) {
-      levelEl.textContent = "SENSOR DISCONNECTED";
+      levelEl.textContent = (level === 'OFFLINE') ? "ESP32 DISCONNECTED" : "SENSOR DISCONNECTED";
       levelEl.className = "text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-900 text-rose-200";
     }
     if (iconDiv) {
@@ -749,7 +790,7 @@ function connectWebSocket() {
           if (m["30m"] !== undefined && m["30m"] !== null) p30 = Number(m["30m"]);
         }
 
-        updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30, payload.source, preds, telem);
+        updateDashboardUI(v, i, rpm, temp, pwr, torque, p1, p5, p15, p30, payload.source, preds, telem, payload);
         if (energy) {
           updateEnergyUI(energy);
         }

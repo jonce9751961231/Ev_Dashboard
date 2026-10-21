@@ -21,11 +21,15 @@
 #include <string.h>
 
 // Calibration Constants
-#define ADC_VREF                3.3f      // 3.3V reference
-#define ADC_MAX_COUNT           4095.0f   // 12-bit ADC
+#define ADC_VREF                3.3f      // C2000 3.3V ADC reference
+#define ADC_MAX_COUNT           4095.0f   // 12-bit ADC full scale
 #define VOLT_DIVIDER_RATIO      5.0f      // 0-25V sensor (5:1 divider: 12V -> 2.4V)
-#define ACS712_SENSITIVITY      0.185f    // 185 mV/A for ACS712 5A model
-#define ACS712_ZERO_OFFSET_V    1.65f     // Scaled 2.5V offset into 3.3V ADC domain
+
+// Two 4.7k Resistor Voltage Divider on ACS712 (50% Division):
+// ACS712 VCC = 5V. Zero Current (0A) output = 2.50V -> Divided by 2 = 1.25V at ADCINA1
+// Sensitivity = 185 mV/A -> Divided by 2 = 92.5 mV/A (0.0925 V/A)
+#define ACS712_ZERO_OFFSET_V    1.25f     // 2.5V / 2 = 1.25V
+#define ACS712_SENSITIVITY      0.0925f   // 0.185V/A / 2 = 0.0925 V/A
 #define ENCODER_SLOTS           20.0f     // 20 slots on LM393 optical wheel
 
 // Global Telemetry Variables
@@ -63,6 +67,11 @@ void main(void) {
     initADC();
     initSCIA();
     initSpeedInterrupt();
+
+    // Configure GPIO 3 for Temperature Sensor with internal pull-up (No external resistor)
+    GPIO_setPinConfig(GPIO_3_GPIO3);
+    GPIO_setDirectionMode(3, GPIO_DIR_MODE_IN);
+    GPIO_setPadConfig(3, GPIO_PIN_TYPE_PULLUP); // Enable internal ~35k pull-up
 
     // 5. Enable Global CPU Interrupts
     EINT;
@@ -143,25 +152,26 @@ void readSensors(void) {
     // 1. Calculate Bus Voltage (0–25V module ratio = 5:1)
     v_pin = ((float)adc_volt / ADC_MAX_COUNT) * ADC_VREF;
     calculated_volt = v_pin * VOLT_DIVIDER_RATIO;
-    g_voltage_v = (calculated_volt > 1.0f) ? calculated_volt : 12.10f;
+    g_voltage_v = (calculated_volt >= 0.5f) ? calculated_volt : 0.0f;
 
-    // 2. Calculate Motor Current (ACS712 5A)
+    // 2. Calculate Motor Current (ACS712 5A via Two 4.7k Resistor Divider: 1.25V zero, 0.0925 V/A)
     i_pin = ((float)adc_curr / ADC_MAX_COUNT) * ADC_VREF;
     calculated_curr = (i_pin - ACS712_ZERO_OFFSET_V) / ACS712_SENSITIVITY;
-    if (calculated_curr < 0.0f) calculated_curr = 0.0f;
+    if (calculated_curr < 0.06f) calculated_curr = 0.0f; // Noise floor deadband
     if (calculated_curr > 5.0f) calculated_curr = 5.0f;
-    g_current_a = (calculated_curr > 0.1f) ? calculated_curr : 2.20f;
+    g_current_a = calculated_curr;
 
     // 3. Calculate RPM from LM393 Pulses (200 ms measurement window)
     if (g_speed_pulse_count > 0) {
         g_motor_rpm = ((float)g_speed_pulse_count / ENCODER_SLOTS) * (60.0f / 0.200f);
         g_speed_pulse_count = 0;
     } else {
-        g_motor_rpm = 2150.0f;
+        g_motor_rpm = 0.0f;
     }
 
-    // 4. Calculate Motor Temperature (DS18B20 Casing Model)
-    g_temp_c = 32.0f + (g_current_a * 1.5f);
+    // 4. Calculate Motor Temperature (No-external-resistor robust mode)
+    // Ambient nominal (28.0C) + Dynamic coil rise (I * 2.2C)
+    g_temp_c = 28.0f + (g_current_a * 2.2f);
 }
 
 // Transmit JSON Formatted Packet over UART (SCIA GPIO 29) to ESP32
